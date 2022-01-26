@@ -1,0 +1,11 @@
+file.*
+*test*
+conf/conf.env
+__pycache__
+certs/*
+output.*
+graph.py
+*.html
+*.dot
+*.gml
+kcat.config

@@ -1,0 +1,9 @@
+psycopg2
+requests
+simplejson
+aiven.client
+configparser
+pyvis
+networkx
+dash
+plotly

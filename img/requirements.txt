@@ -1,0 +1,6 @@
+aiven-client
+configparser
+pyvis
+networkx
+psycopg2
+re
