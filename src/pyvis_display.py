@@ -27,6 +27,7 @@ colors["dashboard"]="#0000cc"
 colors["datasource"]="#0000cc"
 colors["index"]="#0000cc"
 colors["connection-error"]="#0000cc"
+colors["tag"]="#0000cc"
 
 
 sizes = {}
@@ -51,6 +52,7 @@ sizes["dashboard"]=15
 sizes["datasource"]=15
 sizes["index"]=15
 sizes["connection-error"]=15
+sizes["tag"]=10
 
 
 images = {}
@@ -75,6 +77,7 @@ images["dashboard"]="img/dashboard.png"
 images["datasource"]="img/data-source.png"
 images["index"]="img/table.png"
 images["connection-error"]="img/warning.png"
+images["tag"]="img/tag.png"
 
 def pyviz_graphy(nodes, edges):
 
