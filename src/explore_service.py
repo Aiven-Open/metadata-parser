@@ -589,10 +589,19 @@ def explore_pg(self, service_name, project):
     nodes = []
     edges = []
     service = self.get_service(project=project, service=service_name)
-    #print(service["connection_info"])
     
+    # Get the avnadmin password (this is in case someone creates the service and then changes avnadmin password)
+    avnadmin_pwd = list(filter(lambda x: x["username"] == "avnadmin", service["users"]))[0]["password"]
+
+    service_conn_info = service["connection_info"]["pg_params"][0]
+    # Build the connection string
+    connstr = "postgres://avnadmin:"+ avnadmin_pwd + \
+        "@" + service_conn_info["host"] + ":" + service_conn_info["port"] + \
+        "/" + service_conn_info["dbname"] + \
+        "?sslmode=" + service_conn_info["sslmode"]
+
     try:
-        conn = psycopg2.connect(service["connection_info"]["pg"][0], connect_timeout=2)
+        conn = psycopg2.connect(connstr, connect_timeout=2)
     except psycopg2.Error as err:
         conn = None
         print("Error connecting to: " + service_name)
