@@ -185,11 +185,12 @@ def explore (self, service_type, service_name, project):
         nodes.append({"id":service_name,"host":host, "port":port,"cloud":cloud, "plan":plan, "service_type":service_type, "type":"service", "label":service_name})
 
         # Looking for service tags
-        
+
         tags = self.list_service_tags(service=service_name, project=project)
-        for tag in tags:
-            nodes.append({"id":"tag~id~"+tag["key"]+"~value~"+tag["value"], "service_type": "tag", "type": "tag", "label":tag["key"]+"="+tag["value"]})
-            edges.append({"from": service_name, "to": "tag~id~"+tag["key"]+"~value~"+tag["value"], "label": "tag"})
+        
+        for key, value in tags["tags"].items():            
+            nodes.append({"id":"tag~id~"+key+"~value~"+value, "service_type": "tag", "type": "tag", "label":key+"="+value})
+            edges.append({"from": service_name, "to": "tag~id~"+key+"~value~"+value, "label": "tag"})
         
         if newnodes != None:
             nodes = nodes + newnodes
@@ -442,6 +443,7 @@ def explore_kafka(self, service_name, project):
         nodes.append({"id":"kafka~"+service_name+"~topic~"+topic["topic_name"], "service_type": "kafka", "type": "topic", "cleanup_policy":topic["cleanup_policy"], "label":topic["topic_name"]})
         edges.append({"from":"kafka~"+service_name+"~topic~"+topic["topic_name"], "to": service_name, "label": "topic"})
         topic_list.append(topic["topic_name"])
+
         for tag in topic["tags"]:
             nodes.append({"id":"tag~id~"+tag["key"]+"~value~"+tag["value"], "service_type": "tag", "type": "tag", "label":tag["key"]+"="+tag["value"]})
             edges.append({"from":"kafka~"+service_name+"~topic~"+topic["topic_name"], "to": "tag~id~"+tag["key"]+"~value~"+tag["value"], "label": "tag"})
@@ -587,7 +589,8 @@ def explore_pg(self, service_name, project):
     nodes = []
     edges = []
     service = self.get_service(project=project, service=service_name)
-    #print(service["connection_info"]["pg"])
+    #print(service["connection_info"])
+    
     try:
         conn = psycopg2.connect(service["connection_info"]["pg"][0], connect_timeout=2)
     except psycopg2.Error as err:
