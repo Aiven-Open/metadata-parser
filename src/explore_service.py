@@ -183,6 +183,13 @@ def explore (self, service_type, service_name, project):
                 edges.append({"from":integration["source_service"], "to":integration["dest_service"], "main_type":"integration", "integration_type":integration["integration_type"], "label":integration["integration_type"], "integration_id":integration["service_integration_id"]})
         
         nodes.append({"id":service_name,"host":host, "port":port,"cloud":cloud, "plan":plan, "service_type":service_type, "type":"service", "label":service_name})
+
+        # Looking for service tags
+        
+        tags = self.list_service_tags(service=service_name, project=project)
+        for tag in tags:
+            nodes.append({"id":"tag~id~"+tag["key"]+"~value~"+tag["value"], "service_type": "tag", "type": "tag", "label":tag["key"]+"="+tag["value"]})
+            edges.append({"from": service_name, "to": "tag~id~"+tag["key"]+"~value~"+tag["value"], "label": "tag"})
         
         if newnodes != None:
             nodes = nodes + newnodes
@@ -435,6 +442,9 @@ def explore_kafka(self, service_name, project):
         nodes.append({"id":"kafka~"+service_name+"~topic~"+topic["topic_name"], "service_type": "kafka", "type": "topic", "cleanup_policy":topic["cleanup_policy"], "label":topic["topic_name"]})
         edges.append({"from":"kafka~"+service_name+"~topic~"+topic["topic_name"], "to": service_name, "label": "topic"})
         topic_list.append(topic["topic_name"])
+        for tag in topic["tags"]:
+            nodes.append({"id":"tag~id~"+tag["key"]+"~value~"+tag["value"], "service_type": "tag", "type": "tag", "label":tag["key"]+"="+tag["value"]})
+            edges.append({"from":"kafka~"+service_name+"~topic~"+topic["topic_name"], "to": "tag~id~"+tag["key"]+"~value~"+tag["value"], "label": "tag"})
     kafka = self.get_service(project=project, service=service_name)
 
     # Exploring Users
