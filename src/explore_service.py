@@ -1,4 +1,5 @@
 import psycopg2
+import pymysql
 import re
 import requests
 import json
@@ -582,8 +583,72 @@ def find_kafka_service_from_connect(self, service_name, service_type, project):
     return serv_name, serv_type
     
 def explore_mysql(self, service_name, project):
-    print("mysql")
-    return [], []
+    nodes = []
+    edges = []
+
+    service = self.get_service(project=project, service=service_name)
+    
+    # Get the avnadmin password (this is in case someone creates the service and then changes avnadmin password)
+    avnadmin_pwd = list(filter(lambda x: x["username"] == "avnadmin", service["users"]))[0]["password"]
+
+    service_conn_info = service["service_uri_params"]
+    
+    try:
+        conn = pymysql.connect(
+            host=service_conn_info["host"], 
+            port=int(service_conn_info["port"]), 
+            database=service_conn_info["dbname"],
+            user= "avnadmin",
+            password=avnadmin_pwd,
+            connect_timeout=2)
+    except pymysql.Error as err:
+        conn = None
+        print("Error connecting to: " + service_name)
+        nodes.append({"id":"mysql~"+service_name+"~connection-error", "service_type": "mysql", "type": "connection-error", "label":"connection-error"})
+        edges.append({"from":service_name, "to":"mysql~"+service_name+"~connection-error", "label": "connection-error"})
+    
+    if conn != None:
+        cur = conn.cursor()
+        
+        # Getting databases
+        cur.execute("select catalog_name, schema_name from information_schema.schemata;")
+
+        databases = cur.fetchall()
+        for database in databases:
+            #print(database)
+            nodes.append({"id":"mysql~"+service_name+"~database~"+database[1], "service_type": "mysql", "type": "database", "label":database[1]})
+            edges.append({"from":service_name, "to":"mysql~"+service_name+"~database~"+database[1], "label": "database"})
+        
+        # Getting tables
+        cur.execute("select TABLE_SCHEMA,TABLE_NAME, TABLE_TYPE from information_schema.tables where table_schema not in ('information_schema','sys','performance_schema','mysql');")
+
+        tables = cur.fetchall()
+        for table in tables:
+            nodes.append({"id":"mysql~"+service_name+"~database~"+table[0]+"~table~"+table[1], "service_type": "mysql", "type": "table", "label":table[1], "table_type":table[2]})
+            edges.append({"from":"mysql~"+service_name+"~database~"+table[0], "to":"mysql~"+service_name+"~database~"+table[0]+"~table~"+table[1], "label": "table"}) 
+        
+        # Get users
+        cur.execute("select USER, HOST, ATTRIBUTE from information_schema.USER_ATTRIBUTES;")
+
+        users = cur.fetchall()
+        #print(users)
+        for user in users:
+            nodes.append({"id":"mysql~"+service_name+"~user~"+user[0], "service_type": "mysql", "type": "user", "label":user[0]})
+            edges.append({"from":"mysql~"+service_name+"~user~"+user[0], "to":service_name, "label": "user"})
+
+        # Get User Priviledges
+        
+        ##TODO  get user priviledges to tables
+        
+        # Get Columns
+        cur.execute("select TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,IS_NULLABLE,DATA_TYPE from information_schema.columns where table_schema not in ('information_schema', 'sys','mysql','performance_schema');")
+        
+        columns = cur.fetchall()
+        for column in columns:
+            nodes.append({"id":"mysql~"+service_name+"~database~"+column[0]+"~table~"+column[1]+"~column~"+column[2], "service_type": "mysql", "type": "table column", "data_type":column[4], "is_nullable":column[3], "label":column[2]})
+            edges.append({"from":"mysql~"+service_name+"~database~"+column[0]+"~table~"+column[1]+"~column~"+column[2], "to":"mysql~"+service_name+"~database~"+column[0]+"~table~"+column[1], "label": "column"}) 
+
+    return nodes, edges
 
 def explore_pg(self, service_name, project):
     nodes = []

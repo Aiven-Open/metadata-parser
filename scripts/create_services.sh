@@ -191,6 +191,8 @@ avn service connector create demo-kafka-connect '''
     "value.converter.schema.registry.basic.auth.user.info": "avnadmin:'$KAFKA_SCHEMA_REGISTRY_PWD'"
 }'''
 
+
+# Connect to Kafka to create Data
 avn service user-creds-download demo-kafka --username avnadmin -d certs
 
 KAFKA_SERVICE_URI=$(avn service get  demo-kafka --format '{service_uri}')
@@ -210,7 +212,17 @@ echo '{"ip":"192.168.0.123","time":'$(date '+%s')',"status":"ko"}' | kcat -F kca
 echo '{"ip":"192.168.0.123","time":'$(date '+%s')',"status":"ko"}' | kcat -F kcat.config -P -t ssh_logins
 echo '{"ip":"192.168.0.123","time":'$(date '+%s')',"status":"ko"}' | kcat -F kcat.config -P -t ssh_logins
 
+# Connect to mysql
+
+avn service wait demo-mysql
+MYSQL_HOST=$(avn service get demo-mysql --json | jq -r '.service_uri_params.host')
+MYSQL_PORT=$(avn service get demo-mysql --json | jq -r '.service_uri_params.port')
+MYSQL_PWD=$(avn service get demo-mysql --json | jq -r '.service_uri_params.password')
+mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < scripts/create_mysql_tbl.sql
+
+
 KAFKA_FLINK_SI=$(avn service integration-list --format '{source_service} {service_integration_id}' demo-flink | grep demo-kafka | awk -F ' ' '{print $2}')
+
 
 avn service wait demo-flink
 
