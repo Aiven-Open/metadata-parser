@@ -246,7 +246,23 @@ def explore_m3db (self, service_name, project):
 def explore_redis (self, service_name, project):
     nodes = []
     edges = []
-    #TODO
+
+    redis = self.get_service(project=project, service=service_name)
+
+    # Exploring Users and ACL
+    for user in redis["users"]:
+        user_node_id = f"redis~{service_name}~user~{user['username']}"
+
+        nodes.append({"id":user_node_id, "service_type": "redis", "type": "user", "user_type":user["type"], "label":user["username"]})
+        edges.append({"from":user_node_id, "to": service_name, "label": "user"})
+
+        user_acl_info = user["access_control"]
+        acl_node_id = f"redis-user-acl~id~{user['username']}"
+
+        nodes.append({"id":acl_node_id, "service_type": "user-acl", "type": "acl", "label": "user-acl", "access_control": user_acl_info})
+        edges.append({"from":user_node_id, "to": acl_node_id, "label": "acl"})
+
+    #TODO Could query redis and add more parsed data from that
     return nodes, edges
 
 def explore_cassandra (self, service_name, project):
