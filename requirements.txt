@@ -8,3 +8,5 @@ networkx
 dash
 plotly
 pymysql
+pydot
+colour

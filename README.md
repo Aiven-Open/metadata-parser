@@ -73,6 +73,11 @@ The `app.py` reads the `graph_data.gml` file generated at step 1 and creates a R
 **Warning** 
 The code is a bare minimum product, doesn't cover all services and options and is quite chaotic! it demonstrates the idea and how we could start implementing it.
 
+Possible issues and solutions
+============
+
+- If you run `python app.py` and see an error saying `No such file or directory: 'neato'`, you will have to install `graphviz` on your machine (the package version from pip doesn't seem to work) - check how to install [here](https://graphviz.org/download/)
+
 Contributing
 ============
 
