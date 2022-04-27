@@ -1,10 +1,7 @@
-from pyvis.network import Network
 import networkx as nx
 from networkx.drawing.nx_pydot import write_dot
 from networkx.readwrite.gml import write_gml
-from networkx.algorithms.components import node_connected_component
-
-
+from pyvis.network import Network
 
 colors = {}
 colors["service"]="#ff0000"
@@ -28,6 +25,7 @@ colors["datasource"]="#0000cc"
 colors["index"]="#0000cc"
 colors["connection-error"]="#0000cc"
 colors["tag"]="#0000cc"
+colors["backup"]="#0000cc"
 
 
 sizes = {}
@@ -53,6 +51,7 @@ sizes["datasource"]=15
 sizes["index"]=15
 sizes["connection-error"]=15
 sizes["tag"]=10
+sizes["backup"]=10
 
 
 images = {}
@@ -78,6 +77,7 @@ images["datasource"]="img/data-source.png"
 images["index"]="img/table.png"
 images["connection-error"]="img/warning.png"
 images["tag"]="img/tag.png"
+images["backup"]="img/database.png"
 
 def pyviz_graphy(nodes, edges):
 
