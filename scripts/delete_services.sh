@@ -11,3 +11,4 @@ avn service terminate demo-mysql --force
 avn service terminate demo-opensearch --force
 avn service terminate demo-grafana --force
 avn service terminate demo-kafka-connect --force
+avn service terminate demo-redis --force
