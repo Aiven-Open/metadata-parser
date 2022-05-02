@@ -41,6 +41,11 @@ avn service create demo-kafka-connect       \
     --cloud google-europe-west3             \
     --plan business-4
 
+avn service create demo-redis       \
+    --service-type redis            \
+    --cloud google-europe-west3     \
+    --plan business-4
+
 avn service integration-create      \
     -t kafka_connect                \
     -s demo-kafka                   \
@@ -65,7 +70,6 @@ avn service integration-create      \
     -t flink                        \
     -s demo-pg                      \
     -d demo-flink
-
 
 avn service wait demo-kafka 
 
@@ -98,7 +102,6 @@ avn service schema create demo-kafka \
     }'''
 
 avn service wait demo-pg
-
 
 avn service cli demo-pg << EOF
 \i scripts/create_pg_tbl.sql
@@ -277,3 +280,8 @@ curl --location --request GET "$GRAFANA_URL/api/datasources" \
 # Add a grafana dashboard
 avn service wait demo-grafana
 python src/add_grafana_dashboard.py $PROJECT_NAME
+
+# Add redis user and ACL
+avn service wait demo-redis
+avn service user-create --project $PROJECT_NAME --username test demo-redis
+avn service user-set-access-control --project $PROJECT_NAME --username test --redis-acl-keys '~app2:*' demo-redis
