@@ -259,7 +259,7 @@ def explore_redis (self, service_name, project):
         user_acl_info = user["access_control"]
         acl_node_id = f"redis-user-acl~id~{user['username']}"
 
-        nodes.append({"id":acl_node_id, "service_type": "user-acl", "type": "acl", "label": "user-acl", "access_control": user_acl_info})
+        nodes.append({"id":acl_node_id, "service_type": "user-acl", "type": "acl", "label": user['username'] + "-user-acl", "access_control": user_acl_info})
         edges.append({"from":user_node_id, "to": acl_node_id, "label": "acl"})
 
     #TODO Could query redis and add more parsed data from that
