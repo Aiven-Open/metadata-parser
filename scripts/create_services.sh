@@ -281,6 +281,7 @@ curl --location --request GET "$GRAFANA_URL/api/datasources" \
 avn service wait demo-grafana
 python src/add_grafana_dashboard.py $PROJECT_NAME
 
+# Add redis user and ACL
 avn service wait demo-redis
-
 avn service user-create --project $PROJECT_NAME --username test demo-redis
+avn service user-set-access-control --project $PROJECT_NAME --username test --redis-acl-keys '~app2:*' demo-redis
