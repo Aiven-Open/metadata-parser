@@ -58,6 +58,7 @@ images = {}
 images["service"]="img/monitor.png"
 images["topic"]="img/table.png"
 images["topic-acl"]="img/document.png"
+images["acl"]="img/document.png"
 images["database"]="img/database.png"
 images["schema"]="img/document.png"
 images["table"]="img/table.png"
