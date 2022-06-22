@@ -46,7 +46,7 @@ You need to be on Python 3.7, install the required libraries with
 pip install -r requirements.txt
 ```
 
-Copy the `conf.env.sample` file to `conf.env` in the `conf` folder and edit the login parameters and the project name from which you want to extract parameters.
+Copy the `conf.env.sample` file to `conf.env` in the `conf` folder and edit the token parameter and the project name from which you want to extract parameters.
 If you don't have a project with services already running you can create a sample set of services with the `create_services.sh` file, which requires the `aiven-client` to be installed and the user to be logged.
 
 Once `conf.env` is set, you can start the metadata extraction with 

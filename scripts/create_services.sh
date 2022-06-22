@@ -1,9 +1,10 @@
 PROJECT_NAME=$1
-echo $PROJECT_NAME
+. conf/conf.env
 
-avn project switch $PROJECT_NAME
 
-avn service create demo-kafka               \
+avn --auth-token $TOKEN project switch $PROJECT_NAME
+
+avn --auth-token $TOKEN service create demo-kafka               \
     --service-type kafka                    \
     --cloud google-europe-west3             \
     --plan business-4                       \
@@ -11,81 +12,81 @@ avn service create demo-kafka               \
     -c schema_registry=true                 \
     -c kafka.auto_create_topics_enable=true
 
-avn service create demo-flink               \
+avn --auth-token $TOKEN service create demo-flink               \
     --service-type flink                    \
     --cloud google-europe-west3             \
     --plan business-4                                            
 
-avn service create demo-pg                  \
+avn --auth-token $TOKEN service create demo-pg                  \
     --service-type pg                       \
     --cloud google-europe-west3             \
     --plan business-4                                   
 
-avn service create demo-mysql               \
+avn --auth-token $TOKEN service create demo-mysql               \
     --service-type mysql                    \
     --cloud google-europe-west3             \
     --plan business-4   
 
-avn service create demo-grafana             \
+avn --auth-token $TOKEN service create demo-grafana             \
     --service-type grafana                  \
     --cloud google-europe-west3             \
     --plan startup-4
 
-avn service create demo-opensearch          \
+avn --auth-token $TOKEN service create demo-opensearch          \
     --service-type opensearch               \
     --cloud google-europe-west3             \
     --plan business-4
 
-avn service create demo-kafka-connect       \
+avn --auth-token $TOKEN service create demo-kafka-connect       \
     --service-type kafka_connect            \
     --cloud google-europe-west3             \
     --plan business-4
 
-avn service create demo-redis       \
+avn --auth-token $TOKEN service create demo-redis       \
     --service-type redis            \
     --cloud google-europe-west3     \
     --plan business-4
 
-avn service integration-create      \
+avn --auth-token $TOKEN service integration-create      \
     -t kafka_connect                \
     -s demo-kafka                   \
     -d demo-kafka-connect
 
-avn service integration-create      \
+avn --auth-token $TOKEN service integration-create      \
     -t datasource                   \
     -d demo-pg                      \
     -s demo-grafana
 
-avn service integration-create      \
+avn --auth-token $TOKEN service integration-create      \
     -t datasource                   \
     -d demo-opensearch              \
     -s demo-grafana
 
-avn service integration-create      \
+avn --auth-token $TOKEN service integration-create      \
     -t flink                        \
     -s demo-kafka                   \
     -d demo-flink
 
-avn service integration-create      \
+avn --auth-token $TOKEN service integration-create      \
     -t flink                        \
     -s demo-pg                      \
     -d demo-flink
 
-avn service wait demo-kafka 
+avn --auth-token $TOKEN service wait demo-kafka 
 
-avn service topic-create demo-kafka inventory_items \
+avn --auth-token $TOKEN service topic-create demo-kafka inventory_items \
     --partitions 4              \
     --replication 3             \
     --tag bu=sales              \
     --tag scope=sales-inventory
 
-avn service topic-create demo-kafka ssh_logins \
+avn --auth-token $TOKEN service topic-create demo-kafka ssh_logins \
     --partitions 4              \
     --replication 3             \
     --tag bu=security           \
     --tag scope=security-screening
 
-avn service schema create demo-kafka \
+avn --auth-token $TOKEN service schema create demo-kafka \
     --subject=click-record-schema    \
     --schema '''
     {"type": "record",
@@ -101,19 +102,19 @@ avn service schema create demo-kafka \
     ]
     }'''
 
-avn service wait demo-pg
+avn --auth-token $TOKEN service wait demo-pg
 
-avn service cli demo-pg << EOF
+avn --auth-token $TOKEN service cli demo-pg << EOF
 \i scripts/create_pg_tbl.sql
 EOF
 
-PG_PWD=$(avn service user-get demo-pg --format '{password}' --username avnadmin)
-PG_HOSTNAME=$(avn service get demo-pg --json | jq -r '.connection_info.pg_params[0].host')
-PG_PORT=$(avn service get demo-pg --json | jq -r '.connection_info.pg_params[0].port')
-KAFKA_SCHEMA_REGISTRY_URL=$(avn service get demo-kafka --json | jq -r '.connection_info.schema_registry_uri' | sed -e 's/avnadmin\:[0-9a-zA-Z]*\@//g')
-KAFKA_SCHEMA_REGISTRY_PWD=$(avn service user-get demo-kafka --username avnadmin --format '{password}')
+PG_PWD=$(avn --auth-token $TOKEN service user-get demo-pg --format '{password}' --username avnadmin)
+PG_HOSTNAME=$(avn --auth-token $TOKEN service get demo-pg --json | jq -r '.connection_info.pg_params[0].host')
+PG_PORT=$(avn --auth-token $TOKEN service get demo-pg --json | jq -r '.connection_info.pg_params[0].port')
+KAFKA_SCHEMA_REGISTRY_URL=$(avn --auth-token $TOKEN service get demo-kafka --json | jq -r '.connection_info.schema_registry_uri' | sed -e 's/avnadmin\:[0-9a-zA-Z]*\@//g')
+KAFKA_SCHEMA_REGISTRY_PWD=$(avn --auth-token $TOKEN service user-get demo-kafka --username avnadmin --format '{password}')
 
-avn service connector create demo-kafka '''
+avn --auth-token $TOKEN service connector create demo-kafka '''
 {
     "name": "cdc-source-pg",
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
@@ -138,9 +139,9 @@ avn service connector create demo-kafka '''
     "value.converter.basic.auth.credentials.source": "USER_INFO",
     "value.converter.schema.registry.basic.auth.user.info": "avnadmin:'$KAFKA_SCHEMA_REGISTRY_PWD'"
 }'''
-avn service wait demo-kafka-connect
+avn --auth-token $TOKEN service wait demo-kafka-connect
 
-avn service connector create demo-kafka-connect '''
+avn --auth-token $TOKEN service connector create demo-kafka-connect '''
 {
     "name": "cdc-source-pg-kafka-cc",
     "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
@@ -167,13 +168,13 @@ avn service connector create demo-kafka-connect '''
 }'''
 
 
-OS_PWD=$(avn service user-get demo-opensearch --format '{password}' --username avnadmin)
-OS_HOST=$(avn service get demo-opensearch  --json | jq -r '.service_uri_params.host')
-OS_PORT=$(avn service get demo-opensearch  --json | jq -r '.service_uri_params.port')
+OS_PWD=$(avn --auth-token $TOKEN service user-get demo-opensearch --format '{password}' --username avnadmin)
+OS_HOST=$(avn --auth-token $TOKEN service get demo-opensearch  --json | jq -r '.service_uri_params.host')
+OS_PORT=$(avn --auth-token $TOKEN service get demo-opensearch  --json | jq -r '.service_uri_params.port')
 
-avn service wait demo-opensearch
+avn --auth-token $TOKEN service wait demo-opensearch
 
-avn service connector create demo-kafka-connect '''
+avn --auth-token $TOKEN service connector create demo-kafka-connect '''
 {
     "name":"sink_opensearch",
     "connector.class": "io.aiven.kafka.connect.opensearch.OpensearchSinkConnector",
@@ -196,9 +197,9 @@ avn service connector create demo-kafka-connect '''
 
 
 # Connect to Kafka to create Data
-avn service user-creds-download demo-kafka --username avnadmin -d certs
+avn --auth-token $TOKEN service user-creds-download demo-kafka --username avnadmin -d certs
 
-KAFKA_SERVICE_URI=$(avn service get  demo-kafka --format '{service_uri}')
+KAFKA_SERVICE_URI=$(avn --auth-token $TOKEN service get  demo-kafka --format '{service_uri}')
 
 echo '''
 bootstrap.servers='$KAFKA_SERVICE_URI'
@@ -217,19 +218,19 @@ echo '{"ip":"192.168.0.123","time":'$(date '+%s')',"status":"ko"}' | kcat -F kca
 
 # Connect to mysql
 
-avn service wait demo-mysql
-MYSQL_HOST=$(avn service get demo-mysql --json | jq -r '.service_uri_params.host')
-MYSQL_PORT=$(avn service get demo-mysql --json | jq -r '.service_uri_params.port')
-MYSQL_PWD=$(avn service get demo-mysql --json | jq -r '.service_uri_params.password')
+avn --auth-token $TOKEN service wait demo-mysql
+MYSQL_HOST=$(avn --auth-token $TOKEN service get demo-mysql --json | jq -r '.service_uri_params.host')
+MYSQL_PORT=$(avn --auth-token $TOKEN service get demo-mysql --json | jq -r '.service_uri_params.port')
+MYSQL_PWD=$(avn --auth-token $TOKEN service get demo-mysql --json | jq -r '.service_uri_params.password')
 mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < scripts/create_mysql_tbl.sql
 
 
-KAFKA_FLINK_SI=$(avn service integration-list --format '{source_service} {service_integration_id}' demo-flink | grep demo-kafka | awk -F ' ' '{print $2}')
+KAFKA_FLINK_SI=$(avn --auth-token $TOKEN service integration-list --format '{source_service} {service_integration_id}' demo-flink | grep demo-kafka | awk -F ' ' '{print $2}')
 
 
-avn service wait demo-flink
+avn --auth-token $TOKEN service wait demo-flink
 
-avn service flink table create demo-flink $KAFKA_FLINK_SI \
+avn --auth-token $TOKEN service flink table create demo-flink $KAFKA_FLINK_SI \
     --table-name ssh_in      \
     --kafka-topic ssh_logins        \
     --kafka-connector-type kafka \
@@ -242,7 +243,7 @@ avn service flink table create demo-flink $KAFKA_FLINK_SI \
         time_ltz AS TO_TIMESTAMP_LTZ(`time`, 3),
         WATERMARK FOR time_ltz AS time_ltz - INTERVAL '\''10'\'' seconds'''
 
-avn service flink table create demo-flink $KAFKA_FLINK_SI \
+avn --auth-token $TOKEN service flink table create demo-flink $KAFKA_FLINK_SI \
     --table-name ssh_alert      \
     --kafka-topic ssh_alert_logins        \
     --kafka-connector-type kafka \
@@ -253,10 +254,10 @@ avn service flink table create demo-flink $KAFKA_FLINK_SI \
         time_ltz TIMESTAMP(3),
         status VARCHAR'''
 
-TABLE_IN_ID=$(avn service flink table list demo-flink | grep ssh_in | awk -F ' ' '{print $2}')
-TABLE_FILTER_OUT_ID=$(avn service flink table list demo-flink | grep ssh_alert | awk -F ' ' '{print $2}')
+TABLE_IN_ID=$(avn --auth-token $TOKEN service flink table list demo-flink | grep ssh_in | awk -F ' ' '{print $2}')
+TABLE_FILTER_OUT_ID=$(avn --auth-token $TOKEN service flink table list demo-flink | grep ssh_alert | awk -F ' ' '{print $2}')
 
-avn service flink job create demo-flink my_first_agg \
+avn --auth-token $TOKEN service flink job create demo-flink my_first_agg \
     --table-ids $TABLE_IN_ID $TABLE_FILTER_OUT_ID \
     --statement '''
         insert into ssh_alert
@@ -269,19 +270,19 @@ avn service flink job create demo-flink my_first_agg \
             where status = '\''ko'\''
             '''
 
-avn service wait demo-grafana
+avn --auth-token $TOKEN service wait demo-grafana
 
-GRAFANA_PWD=$(avn service get demo-grafana --json | jq -r '.users[0]["password"]')
-GRAFANA_URL=$(avn service get demo-grafana --json | jq -r '.service_uri')
+GRAFANA_PWD=$(avn --auth-token $TOKEN service get demo-grafana --json | jq -r '.users[0]["password"]')
+GRAFANA_URL=$(avn --auth-token $TOKEN service get demo-grafana --json | jq -r '.service_uri')
 
 curl --location --request GET "$GRAFANA_URL/api/datasources" \
     --header "Authorization: Basic $GRAFANA_PWD"
 
 # Add a grafana dashboard
-avn service wait demo-grafana
+avn --auth-token $TOKEN service wait demo-grafana
 python src/add_grafana_dashboard.py $PROJECT_NAME
 
 # Add redis user and ACL
-avn service wait demo-redis
-avn service user-create --project $PROJECT_NAME --username test demo-redis
-avn service user-set-access-control --project $PROJECT_NAME --username test --redis-acl-keys '~app2:*' demo-redis
+avn --auth-token $TOKEN service wait demo-redis
+avn --auth-token $TOKEN service user-create --project $PROJECT_NAME --username test demo-redis
+avn --auth-token $TOKEN service user-set-access-control --project $PROJECT_NAME --username test --redis-acl-keys '~app2:*' demo-redis
