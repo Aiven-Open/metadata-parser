@@ -4,14 +4,16 @@ import json
 import sys
 from aiven.client import client
 
+with open('conf/conf.env', 'r') as f:
+    config_string = '[DEFAULT]\n' + f.read()
 config = configparser.ConfigParser()
-config.read('conf/conf.env')
-config['DEFAULT']['USERNAME']
+config.read_string(config_string)
+
 
 aiven_client = client.AivenClient(base_url=config['DEFAULT']['BASE_URL'])
 
-result = aiven_client.authenticate_user(email=config['DEFAULT']['USERNAME'], password=config['DEFAULT']['PASSWORD'])
-aiven_client.auth_token=result["token"]
+#result = aiven_client.authenticate_user(email=config['DEFAULT']['USERNAME'], password=config['DEFAULT']['PASSWORD'])
+aiven_client.auth_token=config['DEFAULT']['TOKEN']
 
 project=config['DEFAULT']['PROJECT']
 prj = sys.argv[1]

@@ -1,14 +1,15 @@
 PROJECT_NAME=$1
-echo $PROJECT_NAME
-
-avn project switch $PROJECT_NAME
+. conf/conf.env
 
 
-avn service terminate demo-kafka --force
-avn service terminate demo-flink --force
-avn service terminate demo-pg --force
-avn service terminate demo-mysql --force
-avn service terminate demo-opensearch --force
-avn service terminate demo-grafana --force
-avn service terminate demo-kafka-connect --force
-avn service terminate demo-redis --force
+avn --auth-token $TOKEN project switch $PROJECT_NAME
+
+
+avn --auth-token $TOKEN service terminate demo-kafka --force
+avn --auth-token $TOKEN service terminate demo-flink --force
+avn --auth-token $TOKEN service terminate demo-pg --force
+avn --auth-token $TOKEN service terminate demo-mysql --force
+avn --auth-token $TOKEN service terminate demo-opensearch --force
+avn --auth-token $TOKEN service terminate demo-grafana --force
+avn --auth-token $TOKEN service terminate demo-kafka-connect --force
+avn --auth-token $TOKEN service terminate demo-redis --force

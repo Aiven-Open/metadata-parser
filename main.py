@@ -4,16 +4,17 @@ import src.pyvis_display as pyvis_display
 import configparser
 
 # Reading conf.env configuration file
+with open('conf/conf.env', 'r') as f:
+    config_string = '[DEFAULT]\n' + f.read()
 config = configparser.ConfigParser()
-config.read('conf/conf.env')
-config['DEFAULT']['USERNAME']
+config.read_string(config_string)
 
 # Creating Aiven client instance
 myclient = client.AivenClient(base_url=config['DEFAULT']['BASE_URL'])
 
 # Authenticating and storing the token
-result = myclient.authenticate_user(email=config['DEFAULT']['USERNAME'], password=config['DEFAULT']['PASSWORD'])
-myclient.auth_token=result["token"]
+#result = myclient.authenticate_user(email=config['DEFAULT']['USERNAME'], password=config['DEFAULT']['PASSWORD'])
+myclient.auth_token=config['DEFAULT']['TOKEN']
 
 # Creating empty nodes and edges lists
 nodes=[]
@@ -52,9 +53,10 @@ services.sort(key = lambda x: services_order[x["service_type"]])
 # Initial loop to find all ip/hostname of existing services
 i=1
 for service in services:
-
+    
+    #if service["service_name"]!='test':
     print(str(i) + "/" + str(len(services)) + " " + service["service_name"] + " " + service["service_type"])
-    #if service["service_type"]=='grafana':
+#if service["service_type"]=='grafana':
     explore_service.populate_service_map(myclient, service["service_type"], service["service_name"], project=config['DEFAULT']['PROJECT'])
     i = i + 1
 
@@ -62,7 +64,8 @@ for service in services:
 i=1
 for service in services:
     print(str(i) + "/" + str(len(services)))
-    #if service["service_type"]=='grafana':
+    print()
+    #if service["service_name"] != 'test':
     (newnodes, newedges) = explore_service.explore(myclient, service["service_type"], service["service_name"], project=config['DEFAULT']['PROJECT'])
     nodes = nodes + newnodes
     edges = edges + newedges
