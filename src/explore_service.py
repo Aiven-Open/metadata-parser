@@ -11,7 +11,13 @@ SERVICE_MAP = {}
 def populate_service_map(self, service_type, service_name, project):
     global SERVICE_MAP
 
-    service = self.get_service(project=project, service=service_name)
+    try:
+        service = self.get_service(project=project, service=service_name)
+    except Exception as exc:
+        # For instance if we get a 404, or a service goes away while we're looking
+        print(f"Error getting service {service_name}: {exc.__class__.__name__} {exc}")
+        return
+
     if service["state"]=="RUNNING":
         if service_type == 'kafka':
             SERVICE_MAP[service["service_uri_params"]["host"]]=service_name
@@ -91,7 +97,13 @@ def explore (self, service_type, service_name, project):
     global SERVICE_MAP
 
     host = "no-host"
-    service = self.get_service(project=project, service=service_name)
+    try:
+        service = self.get_service(project=project, service=service_name)
+    except Exception as exc:
+        # For instance if we get a 404, or a service goes away while we're looking
+        print(f"Error getting service {service_name}: {exc.__class__.__name__} {exc}")
+        return [], []
+
     print (service_name + " " + service_type)
     if service["state"]=="RUNNING":
         cloud=service["cloud_name"]
@@ -375,14 +387,22 @@ def explore_grafana(self, service_name, project):
                     #TODO explore all columns in a dashboard panel
         else:
             for panel in dash_details["dashboard"]["panels"]:
-                if isinstance(panel["datasource"], str):
+                try:
                     datasource = panel["datasource"]
+                except KeyError:
+                    print(f"Grafana service {service_name} does not seem to have a datasource in panel {panel}")
+                    continue
+                if isinstance(datasource, str):
                     # Creates an edge between the dashboard and datasource
                     edges.append({"from":"grafana~"+service_name+"~dashboard~"+dashboard["title"], "to":"grafana~"+service_name+"~datasource~"+datasource, "label": "dashboard datasource"})
-                elif isinstance(panel["datasource"], dict):
-                    datasource = panel["datasource"]["uid"]
+                elif isinstance(datasource, dict):
+                    datasource = datasource["uid"]
                     # Creates an edge between the dashboard and datasource
-                    edges.append({"from":"grafana~"+service_name+"~dashboard~"+dashboard["title"], "to":"grafana~"+service_name+"~datasource~"+datasources_map[datasource], "label": "dashboard datasource"})
+                    try:
+                        edges.append({"from":"grafana~"+service_name+"~dashboard~"+dashboard["title"], "to":"grafana~"+service_name+"~datasource~"+datasources_map[datasource], "label": "dashboard datasource"})
+                    except KeyError:
+                        print(f"Grafana service {service_name} does not seem to have datasource {datasource}, unable to add edge")
+                        continue
                 #TODO explore all columns in a dashboard panel
     return nodes, edges
 
@@ -426,9 +446,13 @@ def explore_flink(self, service_name, project):
         # Look for an integration that has the same id as the table 
         # Probably we want to do once per flink service rather than doing it for every table
         while src_name == "":
-            if integrations[i]["service_integration_id"]==table["integration_id"]:
-                #print(integrations[i])
-                src_name = integrations[i]["source_service"]
+            try:
+                if integrations[i]["service_integration_id"]==table["integration_id"]:
+                    #print(integrations[i])
+                        src_name = integrations[i]["source_service"]
+            except IndexError:
+                print(f"Flink service {service_name} does not have integration {table['integration_id']}")
+                return [], []
             i = i + 1
         # Creatind edge between table and service
         edges.append({"from":"flink~"+service_name+'~table~'+table["table_name"], "to": service_name, "label": "topic"})
@@ -683,7 +707,12 @@ def explore_pg(self, service_name, project):
     service = self.get_service(project=project, service=service_name)
     
     # Get the avnadmin password (this is in case someone creates the service and then changes avnadmin password)
-    avnadmin_pwd = list(filter(lambda x: x["username"] == "avnadmin", service["users"]))[0]["password"]
+    avnadmin_data = list(filter(lambda x: x["username"] == "avnadmin", service["users"]))
+    try:
+        avnadmin_pwd = avnadmin_data[0]["password"]
+    except IndexError:
+        print(f"Unable to get avnadmin password for service {service_name} - no avnadmin user?")
+        return [], []
 
     service_conn_info = service["connection_info"]["pg_params"][0]
     # Build the connection string
