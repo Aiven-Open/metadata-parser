@@ -44,36 +44,45 @@ services_order["grafana"]=3
 
 
 # Listing the services
+print("Listing services")
 services = myclient.get_services(project=config['DEFAULT']['PROJECT'])
 
 #Ordering based on service_order
 services.sort(key = lambda x: services_order[x["service_type"]])
 
+STOP_AFTER = 15
 
 # Initial loop to find all ip/hostname of existing services
-i=1
-for service in services:
+print("Finding service addresses")
+for i, service in enumerate(services):
     
     #if service["service_name"]!='test':
-    print(str(i) + "/" + str(len(services)) + " " + service["service_name"] + " " + service["service_type"])
+    print(str(i+1) + "/" + str(len(services)) + " " + service["service_name"] + " " + service["service_type"])
 #if service["service_type"]=='grafana':
     explore_service.populate_service_map(myclient, service["service_type"], service["service_name"], project=config['DEFAULT']['PROJECT'])
-    i = i + 1
+    # XXX
+    if i == STOP_AFTER:
+        print("Hacked to stop early")
+        break
 
 # Second loop to find details of each service
-i=1
-for service in services:
-    print(str(i) + "/" + str(len(services)))
+print("Finding service details")
+for i, service in enumerate(services):
+    print(str(i+1) + "/" + str(len(services)))
     print()
     #if service["service_name"] != 'test':
     (newnodes, newedges) = explore_service.explore(myclient, service["service_type"], service["service_name"], project=config['DEFAULT']['PROJECT'])
     nodes = nodes + newnodes
     edges = edges + newedges
-    i = i +1
+    # XXX
+    if i == STOP_AFTER:
+        print("Hacked to stop early")
+        break
 
 (newnodes, newedges) = explore_service.explore_ext_endpoints(myclient, project=config['DEFAULT']['PROJECT'])
 nodes = nodes + newnodes
 edges = edges + newedges
 
-# Creating viz with pyviz     
+# Creating viz with pyviz
+print("Creating output files")
 pyvis_display.pyviz_graphy(nodes, edges)
