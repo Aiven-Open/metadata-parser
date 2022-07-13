@@ -10,3 +10,4 @@ plotly
 pymysql
 pydot
 colour
+cryptography
