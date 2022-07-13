@@ -82,28 +82,70 @@ images["backup"]="img/database.png"
 
 def pyviz_graphy(nodes, edges):
 
+    # NOTE that "bare" colons are not allowed in `dot` names. From the resulting
+    # exception message:
+    #
+    #    Node names and attributes should not contain ":" unless they are quoted with "".
+    #    For example the string 'attribute:data1' should be written as '"attribute:data1"'.
+    #    Please refer https://github.com/pydot/pydot/issues/258
+
     #g = Network(height='750px', width='100%')
     g = nx.DiGraph()
     for node in nodes:
+        if node["id"] is None:
+            print(f"Node has id None: {node} - ignoring it")
+            continue
         img = images.get(node["type"]) if images.get(node["type"]) else 'unknown.png'
         if node["type"] == "service":
             img = "img/services/"+node["service_type"]+".svg"
-        
+
         nodesize = sizes.get(node["type"]) if sizes.get(node["type"]) else 10
         nodecolor = colors.get(node["type"]) if colors.get(node["type"])  else "#cccccc"
-        g.add_node(node["id"], color=nodecolor, 
-            title=str(node).replace(",",",<br>").replace("{","{<br>").replace("}","<br>}"), 
-            size=nodesize, label=node["label"], shape="image", image=img, type=node["type"] if node["type"] else 'NoNodeType', 
-            service_type=node["service_type"], id=node["id"])
-        if node["id"] == None:
-            print(node)
+        # For the moment, hope there are no double quote characters in the name
+        title=f'"{str(node)}"'.replace(",",",<br>").replace("{","{<br>").replace("}","<br>}")
+        id = node["id"]
+        label = node["label"]
+
+        id = f'"{id}"'
+        label = f'"{label}"'
+        ##print(f'Node {node!r} = {title!r}')
+
+        things = (
+            id,
+            title,
+            label,
+            node["type"] if node["type"] else 'NoNodeType',
+            node["service_type"]
+            )
+        if any((':' in x for x in things)):
+            print(f'Problem')
+            for t in things:
+                if ':' in t:
+                    print(f'  {t!r}')
+            print('\n')
+
+        g.add_node(
+            id,
+            color=nodecolor,
+            title=title,
+            size=nodesize,
+            label=label,
+            shape="image",
+            image=img,
+            type=node["type"] if node["type"] else 'NoNodeType',
+            service_type=node["service_type"],
+            id=id
+        )
     for edge in edges:
-        g.add_edge(edge["from"], edge["to"], title=str(edge).replace(",",",<br>").replace("{","{<br>").replace("}","<br>}"), physics=False)
-        if edge["from"] == None or edge["to"] == None:
-            print(edge)
-    
-    
-    
+        if edge["from"] is None or edge["to"] is None:
+            print(f"One or both ends of edge is None: {edge} - ignoring it")
+            continue
+        # For the moment, hope there are no double quote characters in the name
+        title = f'"{str(edge)}"'.replace(",",",<br>").replace("{","{<br>").replace("}","<br>}")
+
+        ##print(f'Edge {edge!r} == {title!r}')
+        g.add_edge(edge["from"], edge["to"], title=title, physics=False)
+
     write_dot(g, 'graph_data.dot')
     write_gml(g, 'graph_data.gml')
     nt = Network(height='1200px', width='1600px', font_color="#000000")
