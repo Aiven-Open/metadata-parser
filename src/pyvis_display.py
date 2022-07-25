@@ -82,13 +82,18 @@ images["backup"]="img/database.png"
 
 def pyviz_graphy(nodes, edges):
 
+    print()
+    print("Calulating network graph")
     #g = Network(height='750px', width='100%')
     g = nx.DiGraph()
     for node in nodes:
+        if node["id"] is None:
+            print(f"Ignoring node {node} - it has id None")
+            continue
         img = images.get(node["type"]) if images.get(node["type"]) else 'unknown.png'
         if node["type"] == "service":
             img = "img/services/"+node["service_type"]+".svg"
-        
+
         nodesize = sizes.get(node["type"]) if sizes.get(node["type"]) else 10
         nodecolor = colors.get(node["type"]) if colors.get(node["type"])  else "#cccccc"
         g.add_node(node["id"], color=nodecolor, 
@@ -97,22 +102,40 @@ def pyviz_graphy(nodes, edges):
             service_type=node["service_type"], id=node["id"])
         if node["id"] == None:
             print(node)
+
     for edge in edges:
+        if edge["from"] is None or edge["to"] is None:
+            print(f"Ignoring edge {edge} - one or both ends is None")
+            continue
         g.add_edge(edge["from"], edge["to"], title=str(edge).replace(",",",<br>").replace("{","{<br>").replace("}","<br>}"), physics=False)
         if edge["from"] == None or edge["to"] == None:
             print(edge)
     
-    
-    
-    write_dot(g, 'graph_data.dot')
-    write_gml(g, 'graph_data.gml')
-    nt = Network(height='1200px', width='1600px', font_color="#000000")
-    nt.from_nx(g)
-    
-    #nt.show_buttons()
-    nt.show_buttons()
-    nt.show('nx.html')
-    #print (g.nodes)
+
+    print()
+    print("Writing DOT file")
+    try:
+        write_dot(g, 'graph_data.dot')
+    except Exception as err:
+        print(f"Error writing DOT file: {err.__class__.__name__} {err}")
+
+    print("Writing GML file")
+    try:
+        write_gml(g, 'graph_data.gml')
+    except Exception as err:
+        print(f"Error writing GML file: {err.__class__.__name__} {err}")
+
+    print("Writing NX file")
+    try:
+        nt = Network(height='1200px', width='1600px', font_color="#000000")
+        nt.from_nx(g)
+        #nt.show_buttons()
+        nt.show_buttons()
+        nt.show('nx.html')
+        #print (g.nodes)
+    except Exception as err:
+        print(f"Error writing NX file: {err.__class__.__name__} {err}")
+
 
     '''
     not_services =  (n for n in g if g.nodes[n]['type'] != 'service')
