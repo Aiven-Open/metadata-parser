@@ -472,7 +472,7 @@ def explore_kafka(self, service, service_name, project):
     
     # If the service has Kafka connect, we can explore it as well
     if(kafka["user_config"]["kafka_connect"]==True):
-        _, _, newnodes, newedges = explore_kafka_connect(self, None, service_name, project, "kafka")
+        _, _, newnodes, newedges = explore_kafka_connect(self, None, service_name, project)
         nodes = nodes + newnodes
         edges = edges + newedges
 
