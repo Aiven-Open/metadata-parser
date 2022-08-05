@@ -56,11 +56,11 @@ python main.py
 ```
 
 This will generate:
-* A file `nx.html` containing the complete interactive graph
-![Graph in action](img/graph.gif)
-* A file `filtered.html` containing the complete interactive graph filtered on the node with id `pg~demo-pg~schema~public~table~pasta` (this might error out if you don't have such node)
 * A file `graph_data.dot` containing the information in [DOT format](https://graphviz.org/doc/info/lang.html)
 * A file `graph_data.gml` containing the information in [GML format](https://en.wikipedia.org/wiki/Geography_Markup_Language)
+* A file `nx.html` containing the complete interactive graph
+![Graph in action](img/graph.gif)
+* (Disabled for the moment) A file `filtered.html` containing the complete interactive graph filtered on the node with id `pg~demo-pg~schema~public~table~pasta` (this might error out if you don't have such node)
 
 Furthermore if, after executing the `main.py` you also execute the following
 

@@ -51,25 +51,22 @@ services.sort(key = lambda x: services_order[x["service_type"]])
 
 
 # Initial loop to find all ip/hostname of existing services
-i=1
-for service in services:
-    
+print("Locate IP/hostname of each service")
+for i, service in enumerate(services, start=1):
     #if service["service_name"]!='test':
-    print(str(i) + "/" + str(len(services)) + " " + service["service_name"] + " " + service["service_type"])
-#if service["service_type"]=='grafana':
+    print(f"{i}/{len(services)} {service['service_name']} {service['service_type']}")
+    #if service["service_type"]=='grafana':
     explore_service.populate_service_map(myclient, service["service_type"], service["service_name"], project=config['DEFAULT']['PROJECT'])
-    i = i + 1
 
 # Second loop to find details of each service
-i=1
-for service in services:
-    print(str(i) + "/" + str(len(services)))
-    print()
+print()
+print("Find details of each service")
+for i, service in enumerate(services, start=1):
+    print(f"{i}/{len(services)} Query {service['service_name']} {service['service_type']}")
     #if service["service_name"] != 'test':
     (newnodes, newedges) = explore_service.explore(myclient, service["service_type"], service["service_name"], project=config['DEFAULT']['PROJECT'])
     nodes = nodes + newnodes
     edges = edges + newedges
-    i = i +1
 
 (newnodes, newedges) = explore_service.explore_ext_endpoints(myclient, project=config['DEFAULT']['PROJECT'])
 nodes = nodes + newnodes

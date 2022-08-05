@@ -230,29 +230,38 @@ KAFKA_FLINK_SI=$(avn --auth-token $TOKEN service integration-list --format '{sou
 
 avn --auth-token $TOKEN service wait demo-flink
 
-avn --auth-token $TOKEN service flink table create demo-flink $KAFKA_FLINK_SI \
-    --table-name ssh_in      \
-    --kafka-topic ssh_logins        \
-    --kafka-connector-type kafka \
-    --kafka-value-format json       \
-    --kafka-startup-mode earliest-offset    \
-    --schema-sql '''
-        ip VARCHAR,
-        `time` BIGINT,
-        status VARCHAR,
-        time_ltz AS TO_TIMESTAMP_LTZ(`time`, 3),
-        WATERMARK FOR time_ltz AS time_ltz - INTERVAL '\''10'\'' seconds'''
+mkdir tmp
+tee tmp/ssh_in.json << EOF
+{
+    "integration_id": "$KAFKA_FLINK_SI",
+    "kafka": {
+        "scan_startup_mode": "earliest-offset",
+        "topic": "ssh_logins",
+        "value_fields_include": "ALL",
+        "value_format": "json"
+    },
+    "schema_sql": "ip VARCHAR, \`time\` BIGINT, status VARCHAR, time_ltz AS TO_TIMESTAMP_LTZ(\`time\`, 3), WATERMARK FOR time_ltz AS time_ltz - INTERVAL '10' seconds",
+    "name": "ssh_in"
+}
+EOF
 
-avn --auth-token $TOKEN service flink table create demo-flink $KAFKA_FLINK_SI \
-    --table-name ssh_alert      \
-    --kafka-topic ssh_alert_logins        \
-    --kafka-connector-type kafka \
-    --kafka-value-format json       \
-    --kafka-startup-mode earliest-offset    \
-    --schema-sql '''
-        ip VARCHAR,
-        time_ltz TIMESTAMP(3),
-        status VARCHAR'''
+avn --auth-token $TOKEN service flink table create demo-flink @tmp/ssh_in.json
+
+tee tmp/ssh_alert.json << EOF
+{
+    "integration_id": "$KAFKA_FLINK_SI",
+    "kafka": {
+        "scan_startup_mode": "earliest-offset",
+        "topic": "ssh_alert_logins",
+        "value_fields_include": "ALL",
+        "value_format": "json"
+    },
+    "schema_sql": "ip VARCHAR, time_ltz TIMESTAMP(3), status VARCHAR",
+    "name": "ssh_alert"
+}
+EOF
+
+avn --auth-token $TOKEN service flink table create demo-flink @tmp/ssh_alert.json
 
 TABLE_IN_ID=$(avn --auth-token $TOKEN service flink table list demo-flink | grep ssh_in | awk -F ' ' '{print $2}')
 TABLE_FILTER_OUT_ID=$(avn --auth-token $TOKEN service flink table list demo-flink | grep ssh_alert | awk -F ' ' '{print $2}')

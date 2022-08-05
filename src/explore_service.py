@@ -6,180 +6,111 @@ import json
 import urllib.parse
 
 SERVICE_MAP = {}
+EXPLORER_METHODS = {}
+
+def add_explorer(service_type):
+    """Register an explorer method for the given service_type"""
+    def adder(method):
+        global EXPLORER_METHODS
+        EXPLORER_METHODS[service_type] = method
+        return method
+    return adder
 
 # This method parses all services to indentify internal IPs or hostnames
 def populate_service_map(self, service_type, service_name, project):
     global SERVICE_MAP
 
     service = self.get_service(project=project, service=service_name)
-    if service["state"]=="RUNNING":
+    if service["state"] != "RUNNING":
+        return
+
+    try:
         if service_type == 'kafka':
             SERVICE_MAP[service["service_uri_params"]["host"]]=service_name
             for url in service["connection_info"]["kafka"]:
                 host = url.split(':')[0]
                 SERVICE_MAP[host]=service_name
-        if service_type == 'flink':
+        elif service_type == 'flink':
             SERVICE_MAP[service["service_uri_params"]["host"]]=service_name
             for url in service["connection_info"]["flink"]:
                 host = url.split(':')[0]
                 SERVICE_MAP[host]=service_name
-        if service_type == 'pg':
+        elif service_type == 'pg':
             SERVICE_MAP[service["connection_info"]["pg_params"][0]["host"]]=service_name
             for component in service["components"]:
                 if component["component"]=="pg":
                     SERVICE_MAP[component["host"]]=service_name
-        if service_type == 'grafana':
+        elif service_type == 'grafana':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-        
-        if service_type == 'opensearch':
+        elif service_type == 'opensearch':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-        
-        if service_type == 'elasticsearch':
+        elif service_type == 'elasticsearch':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-        
-        if service_type == 'grafana':
+        elif service_type == 'grafana':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-
-        if service_type == 'mysql':
+        elif service_type == 'mysql':
             SERVICE_MAP[service["connection_info"]["mysql_params"][0]["host"]]=service_name
-        if service_type == 'kafka_connect':
+        elif service_type == 'kafka_connect':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-        
-        if service_type == 'mirrormaker':
+        elif service_type == 'mirrormaker':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-        
-        if service_type == 'clickhouse':
+        elif service_type == 'clickhouse':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
-        
-        if service_type == 'cassandra':
+        elif service_type == 'cassandra':
             host=service["service_uri_params"]["host"]
             SERVICE_MAP[host]=service_name
+        elif service_type == 'redis':
+            host=service["service_uri_params"]["host"]
+            SERVICE_MAP[host]=service_name
+        elif service_type == 'm3db':
+            host=service["service_uri_params"]["host"]
+            SERVICE_MAP[host]=service_name
+        elif service_type == 'm3aggregator':
+            host=service["service_uri_params"]["host"]
+            SERVICE_MAP[host]=service_name
+        elif service_type == 'm3coordinator':
+            host=service["service_uri_params"]["host"]
+            SERVICE_MAP[host]=service_name
+        elif service_type == 'influxdb':
+            host=service["service_uri_params"]["host"]
+            SERVICE_MAP[host]=service_name
+        else:
+            print(f"Ignoring RUNNING {service_type} service {service_name} with unrecognised type {service_type}")
+    except KeyError as err:
+        print(f"Error looking up host for RUNNING {service_type} service {service_name}: {err}")
 
-        if service_type == 'redis':
-            host=service["service_uri_params"]["host"]
-            SERVICE_MAP[host]=service_name
 
-        if service_type == 'm3db':
-            host=service["service_uri_params"]["host"]
-            SERVICE_MAP[host]=service_name
-
-        if service_type == 'm3aggregator':
-            host=service["service_uri_params"]["host"]
-            SERVICE_MAP[host]=service_name
-
-        if service_type == 'm3coordinator':
-            host=service["service_uri_params"]["host"]
-            SERVICE_MAP[host]=service_name
-        
-        if service_type == 'influxdb':
-            host=service["service_uri_params"]["host"]
-            SERVICE_MAP[host]=service_name
-    
-    
-
-def explore (self, service_type, service_name, project):
+def explore(self, service_type, service_name, project):
     edges = []
     nodes = []
-    
-    global SERVICE_MAP
 
     host = "no-host"
     service = self.get_service(project=project, service=service_name)
-    print (service_name + " " + service_type)
-    if service["state"]=="RUNNING":
-        cloud=service["cloud_name"]
-        plan=service["plan"]
-        if service_type == 'kafka':
-            (newnodes, newedges) = explore_kafka(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-        if service_type == 'flink':
-            (newnodes, newedges) = explore_flink(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=443
-            
-        if service_type == 'pg':
-            #print (service)
-            (newnodes, newedges) = explore_pg(self, service_name, project)
-            host=service["connection_info"]["pg_params"][0]["host"]
-            port=service["connection_info"]["pg_params"][0]["port"]
-            
-        if service_type == 'mysql':
-            (newnodes, newedges) = explore_mysql(self, service_name, project)
-            host=service["connection_info"]["mysql_params"][0]["host"]
-            port=service["connection_info"]["mysql_params"][0]["port"]
-        
-        if service_type == 'grafana':
-            (newnodes, newedges) = explore_grafana(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-        
-        if service_type == 'opensearch':
-            (newnodes, newedges) = explore_opensearch(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-        
-        if service_type == 'elasticsearch':
-            (newnodes, newedges) = explore_elasticsearch(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
+    if service["state"] != "RUNNING":
+        return nodes, edges
 
-        if service_type == 'kafka_connect':
-            (newnodes, newedges) = explore_kafka_connect(self, service_name, project, "kafka_connect")
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-        
-        if service_type == 'kafka_mirrormaker':
-            (newnodes, newedges) = explore_mirrormaker(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=443
-        
-        if service_type == 'clickhouse':
-            (newnodes, newedges) = explore_clickhouse(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-        
-        if service_type == 'cassandra':
-            (newnodes, newedges) = explore_cassandra(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
+    try:
+        explorer_fn = EXPLORER_METHODS[service_type]
+    except KeyError:
+        print(f"Don't know how to explore RUNNING {service_type} service {service_name}")
+        return nodes, edges
 
-        if service_type == 'redis':
-            (newnodes, newedges) = explore_redis(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-
-        if service_type == 'm3db':
-            (newnodes, newedges) = explore_m3db(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-
-        if service_type == 'm3aggregator':
-            (newnodes, newedges) = explore_m3aggregator(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-
-        if service_type == 'm3coordinator':
-            (newnodes, newedges) = explore_m3coordinator(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
-        
-        if service_type == 'influxdb':
-            (newnodes, newedges) = explore_influxdb(self, service_name, project)
-            host=service["service_uri_params"]["host"]
-            port=service["service_uri_params"]["port"]
+    try:
+        cloud = service["cloud_name"]
+        plan = service["plan"]
+        host, port, newnodes, newedges = explorer_fn(self, service, service_name, project)
 
         # Disabling this piece for now since it's taking looooong time
         integrations = self.get_service_integrations(service=service_name, project=project)
         for integration in integrations:
-            if(integration["enabled"]==True):
+            if integration["enabled"] is True:
                 
                 edges.append({"from":integration["source_service"], "to":integration["dest_service"], "main_type":"integration", "integration_type":integration["integration_type"], "label":integration["integration_type"], "integration_id":integration["service_integration_id"]})
         
@@ -189,7 +120,7 @@ def explore (self, service_type, service_name, project):
 
         tags = self.list_service_tags(service=service_name, project=project)
         
-        for key, value in tags["tags"].items():            
+        for key, value in tags["tags"].items():
             nodes.append({"id":"tag~id~"+key+"~value~"+value, "service_type": "tag", "type": "tag", "label":key+"="+value})
             edges.append({"from": service_name, "to": "tag~id~"+key+"~value~"+value, "label": "tag"})
 
@@ -204,64 +135,89 @@ def explore (self, service_type, service_name, project):
                           "label": "backup",
                           "to": "service_type~" + service_type + "~service_name~" + service_name + "~backup~" + backup["backup_name"]})
 
-        if newnodes != None:
+        if newnodes:
             nodes = nodes + newnodes
-        if newedges != None:
+        if newedges:
             edges = edges + newedges
+
+    except Exception as err:
+        print(f"Error looking up data for RUNNING {service_type} service {service_name}:"
+              f" {err.__class__.__name__} {err}")
         
     return nodes, edges
 
-def explore_influxdb (self, service_name, project):
+@add_explorer('influxdb')
+def explore_influxdb (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_elasticsearch (self, service_name, project):
+@add_explorer('elasticsearch')
+def explore_elasticsearch (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_m3aggregator (self, service_name, project):
+@add_explorer('m3aggregator')
+def explore_m3aggregator (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_m3coordinator (self, service_name, project):
+@add_explorer('m3coordinator')
+def explore_m3coordinator (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_clickhouse (self, service_name, project):
+@add_explorer('clickhouse')
+def explore_clickhouse (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_mirrormaker (self, service_name, project):
+@add_explorer('kafka_mirrormaker')
+def explore_mirrormaker (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = 443
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_m3db (self, service_name, project):
+@add_explorer('m3db')
+def explore_m3db (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-
-def explore_redis (self, service_name, project):
+@add_explorer('redis')
+def explore_redis (self, service, service_name, project):
     nodes = []
     edges = []
-
-    redis = self.get_service(project=project, service=service_name)
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
 
     # Exploring Users and ACL
-    for user in redis["users"]:
+    for user in service["users"]:
         user_node_id = f"redis~{service_name}~user~{user['username']}"
 
         nodes.append({"id":user_node_id, "service_type": "redis", "type": "user", "user_type":user["type"], "label":user["username"]})
@@ -274,19 +230,23 @@ def explore_redis (self, service_name, project):
         edges.append({"from":user_node_id, "to": acl_node_id, "label": "acl"})
 
     #TODO Could query redis and add more parsed data from that
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_cassandra (self, service_name, project):
+@add_explorer('cassandra')
+def explore_cassandra (self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     #TODO
-    return nodes, edges
+    return host, port, nodes, edges
 
-
-def explore_grafana(self, service_name, project):
+@add_explorer('grafana')
+def explore_grafana(self, service, service_name, project):
     nodes = []
     edges = []
-    service = self.get_service(project=project, service=service_name)
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     users = service["users"]
     password = "fake"
 
@@ -384,11 +344,14 @@ def explore_grafana(self, service_name, project):
                     # Creates an edge between the dashboard and datasource
                     edges.append({"from":"grafana~"+service_name+"~dashboard~"+dashboard["title"], "to":"grafana~"+service_name+"~datasource~"+datasources_map[datasource], "label": "dashboard datasource"})
                 #TODO explore all columns in a dashboard panel
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_opensearch(self, service_name, project):
+@add_explorer('opensearch')
+def explore_opensearch(self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
     # Getting indexes
     indexes = self.get_service_indexes(project=project, service=service_name)
     for index in indexes:
@@ -399,11 +362,15 @@ def explore_opensearch(self, service_name, project):
         edges.append({"from":"opensearch~"+service_name+"~index~"+index["index_name"], "to":service_name, "label": "index"})
     
     # TODO parse more stuff
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_flink(self, service_name, project):
+@add_explorer('flink')
+def explore_flink(self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = 443
+
     tables = self.list_flink_tables(service=service_name, project=project)
     tables_map = {}
 
@@ -456,12 +423,16 @@ def explore_flink(self, service_name, project):
         # Adding edges between Job node and service
         edges.append({"from":"flink~"+service_name+'~job~'+job_det["name"], "to": service_name, "label": "flink job"})
         # TODO: once the api returns the Flink tables used for the job, create edges between tables and jobs
-    return nodes, edges
+    return host, port, nodes, edges
 
 # Exploring Kafka Services
-def explore_kafka(self, service_name, project):
+@add_explorer('kafka')
+def explore_kafka(self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["service_uri_params"]["host"]
+    port = service["service_uri_params"]["port"]
+
     topics = self.list_service_topics(service=service_name, project=project)
     topic_list = []
 
@@ -475,6 +446,7 @@ def explore_kafka(self, service_name, project):
         for tag in topic["tags"]:
             nodes.append({"id":"tag~id~"+tag["key"]+"~value~"+tag["value"], "service_type": "tag", "type": "tag", "label":tag["key"]+"="+tag["value"]})
             edges.append({"from":"kafka~"+service_name+"~topic~"+topic["topic_name"], "to": "tag~id~"+tag["key"]+"~value~"+tag["value"], "label": "tag"})
+
     kafka = self.get_service(project=project, service=service_name)
 
     # Exploring Users
@@ -500,16 +472,30 @@ def explore_kafka(self, service_name, project):
     
     # If the service has Kafka connect, we can explore it as well
     if(kafka["user_config"]["kafka_connect"]==True):
-        (newnodes, newedges) = explore_kafka_connect(self, service_name, project, "kafka")
+        _, _, newnodes, newedges = explore_kafka_connect(self, None, service_name, project)
         nodes = nodes + newnodes
-        edges = edges + newedges    
+        edges = edges + newedges
 
-    return nodes, edges
+    return host, service, nodes, edges
 
 # Exploring Kafka Services
-def explore_kafka_connect(self, service_name, project, service_type):
+@add_explorer('kafka_connect')
+def explore_kafka_connect(self, service, service_name, project):
+    """Explore a Kafka Connect service.
+
+    Note that `service` will be None if we're called from explore_kafka
+    """
     nodes = []
     edges = []
+    if service is None:
+        service_type = "kafka"
+        host = None
+        port = None
+    else:
+        service_type = "kafka_connect"
+        host = service["service_uri_params"]["host"]
+        port = service["service_uri_params"]["port"]
+
     # The service map allows to indetify if the source/target of a connector is within aiven or external
     global SERVICE_MAP 
     
@@ -595,7 +581,7 @@ def explore_kafka_connect(self, service_name, project, service_type):
 
         nodes.append(properties)
         
-    return nodes, edges
+    return host, port, nodes, edges
 
 # Find the kafka instance that the connector is pushing/taking data from/to
 def find_kafka_service_from_connect(self, service_name, service_type, project):
@@ -608,13 +594,14 @@ def find_kafka_service_from_connect(self, service_name, service_type, project):
             if(integration["enabled"]==True and integration["integration_type"]=="kafka_connect"):
                 serv_name = integration["source_service"]
     return serv_name, serv_type
-    
-def explore_mysql(self, service_name, project):
+
+@add_explorer('mysql')
+def explore_mysql(self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["connection_info"]["mysql_params"][0]["host"]
+    port = service["connection_info"]["mysql_params"][0]["port"]
 
-    service = self.get_service(project=project, service=service_name)
-    
     # Get the avnadmin password (this is in case someone creates the service and then changes avnadmin password)
     avnadmin_pwd = list(filter(lambda x: x["username"] == "avnadmin", service["users"]))[0]["password"]
 
@@ -675,11 +662,15 @@ def explore_mysql(self, service_name, project):
             nodes.append({"id":"mysql~"+service_name+"~database~"+column[0]+"~table~"+column[1]+"~column~"+column[2], "service_type": "mysql", "type": "table column", "data_type":column[4], "is_nullable":column[3], "label":column[2]})
             edges.append({"from":"mysql~"+service_name+"~database~"+column[0]+"~table~"+column[1]+"~column~"+column[2], "to":"mysql~"+service_name+"~database~"+column[0]+"~table~"+column[1], "label": "column"}) 
 
-    return nodes, edges
+    return host, port, nodes, edges
 
-def explore_pg(self, service_name, project):
+@add_explorer('pg')
+def explore_pg(self, service, service_name, project):
     nodes = []
     edges = []
+    host = service["connection_info"]["pg_params"][0]["host"]
+    port = service["connection_info"]["pg_params"][0]["port"]
+
     service = self.get_service(project=project, service=service_name)
     
     # Get the avnadmin password (this is in case someone creates the service and then changes avnadmin password)
@@ -749,7 +740,7 @@ def explore_pg(self, service_name, project):
 
         cur.close()
         conn.close()
-    return nodes, edges
+    return host, port, nodes, edges
 
 def explore_ext_endpoints(self, project):
     nodes = []
