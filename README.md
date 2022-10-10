@@ -70,6 +70,12 @@ python app.py
 
 The `app.py` reads the `graph_data.gml` file generated at step 1 and creates a Reactive Web Applications with [Plotly](https://plot.ly/python/) and [Dash](https://plot.ly/dash/) (code taken from [here](https://towardsdatascience.com/python-interactive-network-visualization-using-networkx-plotly-and-dash-e44749161ed7))
 
+Lastly the following allows you to push the content to a PG database passing the PG URI
+
+```
+python write_pg.py PG_URI
+```
+
 **Warning** 
 The code is a bare minimum product, doesn't cover all services and options and is quite chaotic! it demonstrates the idea and how we could start implementing it.
 

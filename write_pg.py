@@ -1,11 +1,15 @@
 "Writes results to PG"
 
-from aiven.client import client
+import argparse
 import json
 from networkx.readwrite.gml import read_gml
 import psycopg2
 
-connstr = "postgres://avnadmin:AVNS_Cm_QriICpxkfKup0tfk@demo-pg-dev-advocates.aivencloud.com:13039/defaultdb?sslmode=require"
+parser = argparse.ArgumentParser(description="Push data to PG Database.")
+parser.add_argument("uri", metavar="N", help="pass the PG URI")
+args = parser.parse_args()
+print(args.uri)
+connstr = args.uri
 
 try:
     conn = psycopg2.connect(connstr, connect_timeout=2)
@@ -15,7 +19,11 @@ except psycopg2.Error as err:
 
 cur = conn.cursor()
 cur.execute(
-    "select exists(select * from information_schema.tables where table_name=%s)",
+    """
+    select exists(
+        select * from information_schema.tables where table_name=%s
+        )
+    """,
     ("metadata_parser_nodes",),
 )
 if cur.fetchone()[0]:
