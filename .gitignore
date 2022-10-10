@@ -10,3 +10,5 @@ graph.py
 *.gml
 kcat.config
 tmp
+.vscode
+*.log

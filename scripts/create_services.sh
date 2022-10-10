@@ -295,3 +295,5 @@ python src/add_grafana_dashboard.py $PROJECT_NAME
 avn --auth-token $TOKEN service wait demo-redis
 avn --auth-token $TOKEN service user-create --project $PROJECT_NAME --username test demo-redis
 avn --auth-token $TOKEN service user-set-access-control --project $PROJECT_NAME --username test --redis-acl-keys '~app2:*' demo-redis
+
+mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < scripts/create_mysql_usr.sql
