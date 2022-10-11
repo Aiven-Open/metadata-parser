@@ -72,6 +72,7 @@ def populate_service_map(self, service_type, service_name, project):
         ]:
             host = service["service_uri_params"]["host"]
             SERVICE_MAP[host] = service_name
+            print(host)
         else:
             print(
                 f"Ignoring RUNNING {service_type} service {service_name}"
@@ -436,7 +437,7 @@ def explore_grafana(self, service, service_name, project):
         # Check if the host in the list of target hosts already
         dest_service = SERVICE_MAP.get(target_host)
         # If host doesn't exist yet
-        if dest_service is not None:
+        if dest_service is None:
             # Create new node for external service host
             nodes.append(
                 {
@@ -472,7 +473,7 @@ def explore_grafana(self, service, service_name, project):
 
         # In case is PG
         if datasource["type"] == "postgres":
-            if dest_service is not None:
+            if dest_service is None:
                 # Creates a database node in the external service
                 nodes.append(
                     {
@@ -653,6 +654,35 @@ def explore_opensearch(self, service, service_name, project):
     edges = []
     host = service["service_uri_params"]["host"]
     port = service["service_uri_params"]["port"]
+
+    opensearch = self.get_service(project=project, service=service_name)
+
+    # Exploring Users
+    for user in opensearch["users"]:
+
+        nodes.append(
+            {
+                "id": "opensearch~"
+                + service_name
+                + "~user~"
+                + user["username"],
+                "service_type": "opensearch",
+                "type": "user",
+                "user_type": user["type"],
+                "label": user["username"],
+            }
+        )
+        edges.append(
+            {
+                "from": "opensearch~"
+                + service_name
+                + "~user~"
+                + user["username"],
+                "to": service_name,
+                "label": "user",
+            }
+        )
+
     # Getting indexes
     indexes = self.get_service_indexes(project=project, service=service_name)
     for index in indexes:
@@ -685,6 +715,29 @@ def explore_opensearch(self, service, service_name, project):
         )
 
     # tobedone parse more stuff
+    # Getting ACLs
+    ACLs = self.list_service_elasticsearch_acl_config(
+        project=project, service=service_name
+    )
+    
+    # If ACLs are not enabled create an edge between each user and each index
+    if not ACLs["elasticsearch_acl_config"]["enabled"]:
+        for user in opensearch["users"]:
+            for index in indexes:
+                edges.append(
+                    {
+                        "from": "opensearch~"
+                        + service_name
+                        + "~index~"
+                        + index["index_name"],
+                        "to": "opensearch~"
+                        + service_name
+                        + "~user~"
+                        + user["username"],
+                        "label": "visibility_index",
+                    }
+                )
+    # tobedone: check how to parse everything when ACLs are set
     return host, port, nodes, edges
 
 
@@ -1227,8 +1280,8 @@ def explore_kafka_connect(self, service, service_name, project):
 
             # Looks for the target service to be in Aiven,
             # if None, creates a new node for the target service
-            if target_service is not None:
-                print("NOT FOUUUUND!!!!!!!!!!!!!!!")
+            if target_service is None:
+                print("NOT FOUUUUND!!!!!!!!!!!!!!!" + target_host)
                 # tobedone What should we create in case
                 # we don't find the target Opensearch?
             else:

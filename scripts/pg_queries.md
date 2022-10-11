@@ -1,7 +1,15 @@
 # Check the Nodes
 
 ```
-select id, json_content from metadata_parser_nodes;
+select id, json_content from metadata_parser_nodes where id='pg~demo-pg~database~defaultdb';
+```
+
+```
+select json_content from metadata_parser_nodes where id='service_type~pg~service_name~demo-pg~backup~2022-10-11_07-01_0.00000000.pghoard';
+```
+
+```
+select json_content from metadata_parser_nodes where id='opensearch~demo-opensearch~index~my_pg_source.public.pasta';
 ```
 
 # Check the Edges
@@ -26,21 +34,23 @@ json_content @> '{"type": "user"}';
 # Recursive query to get the users who can interact with the `pasta` TABLE
 
 ```
-with recursive paths (id, last_type, last_service_type, list_of_edges, nr_items) as (
+with recursive paths (id, last_label, last_type, last_service_type, list_of_edges, nr_items) as (
 	select 
 		id, 
+		json_content ->> 'label',
 		json_content ->> 'type',
 		json_content ->> 'service_type',
-		ARRAY[jsonb_build_object('label', json_content ->> 'label', 'type', json_content ->> 'type')],
+		ARRAY[((n.json_content ->> 'type') || ':' || (n.json_content ->> 'label'))],
 		1
 	from metadata_parser_nodes n 
 	where json_content ->> 'label' = 'pasta' 
 	UNION ALL
 	select 
 		n.id,
+		n.json_content ->> 'label',
 		n.json_content ->> 'type',
 		n.json_content ->> 'service_type',
-		list_of_edges || jsonb_build_object('label', n.json_content ->> 'label', 'type', n.json_content ->> 'type'),
+		list_of_edges || ((n.json_content ->> 'type') || ':' || (n.json_content ->> 'label')),
 		nr_items + 1
 	from paths p 
 	join metadata_parser_edges e on p.id = e.source_id
@@ -49,5 +59,5 @@ with recursive paths (id, last_type, last_service_type, list_of_edges, nr_items)
 		1=1
 		and n.json_content ->> 'type' <> 'service'
 	) CYCLE id SET is_cycle USING items_ids
-select * from paths where is_cycle = False and last_type = 'user' order by nr_items;
+select last_label, last_type, last_service_type, list_of_edges from paths where is_cycle = False and last_type = 'user' order by nr_items;
 ```
