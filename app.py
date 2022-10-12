@@ -1,12 +1,13 @@
+"""Dash app to show the network"""
+import json
+from textwrap import dedent as d
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import networkx as nx
 import plotly.graph_objs as go
 
-from colour import Color
-from textwrap import dedent as d
-import json
+
 from networkx.readwrite.gml import read_gml
 from networkx.algorithms.components import node_connected_component
 
@@ -15,44 +16,49 @@ external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.title = "Aiven Network"
 
-YEAR = [2010, 2022]
 ACCOUNT = None
 TYPESTOFILTER = None
 
-list_of_nodes = []
-list_of_types = []
+LIST_OF_NODES = []
+LIST_OF_TYPES = []
 
-##############################################################################################################################################################
-def network_graph(NodeToFilter, TypesToFilter):
+##################################################
+##################################################
+##################################################
 
-    edge_x = []
-    edge_y = []
 
-    global list_of_nodes
-    global list_of_types
-    G = read_gml("graph_data.gml")
-    not_services = (n for n in G if G.nodes[n].get("type") != "service")
+def network_graph(node_to_filter, types_to_filter):
+    """Manages the graph"""
 
-    if NodeToFilter and NodeToFilter != "All":
+    global LIST_OF_NODES
+    global LIST_OF_TYPES
+    graph = read_gml("graph_data.gml")
+    not_services = (
+        n for n in graph if graph.nodes[n].get("type") != "service"
+    )
+
+    if node_to_filter and node_to_filter != "All":
         conn = node_connected_component(
-            G.to_undirected().subgraph(not_services), NodeToFilter
+            graph.to_undirected().subgraph(not_services), node_to_filter
         )
-        G = G.subgraph(conn)
-    if TypesToFilter:
-        sel_nodes = (n for n in G if G.nodes[n].get("type") in TypesToFilter)
-        G = G.subgraph(sel_nodes)
-    pos = nx.nx_pydot.pydot_layout(G)
+        graph = graph.subgraph(conn)
+    if types_to_filter:
+        sel_nodes = (
+            n for n in graph if graph.nodes[n].get("type") in types_to_filter
+        )
+        graph = graph.subgraph(sel_nodes)
+    pos = nx.nx_pydot.pydot_layout(graph)
     # pos = nx.layout.spring_layout(G)
 
-    list_of_nodes = []
-    list_of_types = []
-    list_of_nodes.append({"label": "All", "value": "All"})
-    for node in G.nodes():
+    LIST_OF_NODES = []
+    LIST_OF_TYPES = []
+    LIST_OF_NODES.append({"label": "All", "value": "All"})
+    for node in graph.nodes():
 
-        G.nodes[node]["pos"] = pos[node]
+        graph.nodes[node]["pos"] = pos[node]
         title = (
-            G.nodes[node].get("title")
-            if G.nodes[node].get("title")
+            graph.nodes[node].get("title")
+            if graph.nodes[node].get("title")
             else '{"type":"unknown","id":"dunno","label":"dunno"}'
         )
         node_det = json.loads(
@@ -62,38 +68,41 @@ def network_graph(NodeToFilter, TypesToFilter):
             .replace("False", "false")
             .replace("None", "[]")
         )
-        list_of_types.append(G.nodes[node].get("type"))
+        LIST_OF_TYPES.append(graph.nodes[node].get("type"))
         if node_det.get("type") != "service":
-            list_of_nodes.append(
+            LIST_OF_NODES.append(
                 {
                     "label": node_det.get("id").replace("~", " -> "),
                     "value": node_det.get("id"),
                 }
             )
 
-    list_of_types = list(sorted(set(list_of_types)))
+    LIST_OF_TYPES = list(sorted(set(LIST_OF_TYPES)))
 
-    traceRecode = []  # contains edge_trace, node_trace, middle_node_trace
-    ############################################################################################################################################################
+    trace_record = []  # contains edge_trace, node_trace, middle_node_trace
+    ####################################################
+    ####################################################
 
     index = 0
-    for edge in G.edges:
+    for edge in graph.edges:
         # print(edge)
-        x0, y0 = G.nodes[edge[0]]["pos"]
-        x1, y1 = G.nodes[edge[1]]["pos"]
+        x_0, y_0 = graph.nodes[edge[0]]["pos"]
+        x_1, y_1 = graph.nodes[edge[1]]["pos"]
         weight = 1
         trace = go.Scatter(
-            x=tuple([x0, x1, None]),
-            y=tuple([y0, y1, None]),
+            x=tuple([x_0, x_1, None]),
+            y=tuple([y_0, y_1, None]),
             mode="lines",
             line={"width": weight},
             marker=dict(color="#dddddd"),
             # line_shape='spline',
             opacity=1,
         )
-        traceRecode.append(trace)
+        trace_record.append(trace)
         index = index + 1
-    ###############################################################################################################################################################
+    ######################################################
+    ######################################################
+
     node_trace = go.Scatter(
         x=[],
         y=[],
@@ -106,16 +115,15 @@ def network_graph(NodeToFilter, TypesToFilter):
     )
 
     index = 0
-    for node in G.nodes():
-        x, y = G.nodes[node]["pos"]
-        # print(G.nodes[node])
+    for node in graph.nodes():
+        x_pos, y_pos = graph.nodes[node]["pos"]
+        # print(graph.nodes[node])
         title = (
-            G.nodes[node].get("title")
-            if G.nodes[node].get("title")
+            graph.nodes[node].get("title")
+            if graph.nodes[node].get("title")
             else '{"type":"unknown","id":"dunno","label":"dunno"}'
         )
-        hovertext = title  # .replace(",",",<br>").replace("{","{<br>").replace("}","<br>}")
-        # print(G.nodes[node]['title'].replace('<br>','').replace("'",'"'))
+        hovertext = title
         text = json.loads(
             title.replace("<br>", "")
             .replace("'", '"')
@@ -123,15 +131,17 @@ def network_graph(NodeToFilter, TypesToFilter):
             .replace("False", "false")
             .replace("None", "[]")
         )["label"]
-        node_trace["x"] += tuple([x])
-        node_trace["y"] += tuple([y])
+        node_trace["x"] += tuple([x_pos])
+        node_trace["y"] += tuple([y_pos])
         node_trace["hovertext"] += tuple([hovertext])
         node_trace["text"] += tuple([text])
         # node_trace['marker'] = tuple(["img/dashboard"])
         index = index + 1
 
-    traceRecode.append(node_trace)
-    ################################################################################################################################################################
+    trace_record.append(node_trace)
+
+    ########################################################
+
     middle_hover_trace = go.Scatter(
         x=[],
         y=[],
@@ -143,11 +153,11 @@ def network_graph(NodeToFilter, TypesToFilter):
     )
 
     index = 0
-    for edge in G.edges:
-        x0, y0 = G.nodes[edge[0]]["pos"]
-        x1, y1 = G.nodes[edge[1]]["pos"]
+    for edge in graph.edges:
+        x_0, y_0 = graph.nodes[edge[0]]["pos"]
+        x_1, y_1 = graph.nodes[edge[1]]["pos"]
         edge_json = json.loads(
-            G.edges[edge]["title"]
+            graph.edges[edge]["title"]
             .replace("<br>", "")
             .replace("'", '"')
             .replace("True", "true")
@@ -160,16 +170,16 @@ def network_graph(NodeToFilter, TypesToFilter):
             "to": edge_json["to"],
             "type": edge_json["label"],
         }
-        hovertext = G.edges[edge]["title"]
-        middle_hover_trace["x"] += tuple([(x0 + x1) / 2])
-        middle_hover_trace["y"] += tuple([(y0 + y1) / 2])
+        hovertext = graph.edges[edge]["title"]
+        middle_hover_trace["x"] += tuple([(x_0 + x_1) / 2])
+        middle_hover_trace["y"] += tuple([(y_0 + y_1) / 2])
         middle_hover_trace["hovertext"] += tuple([hovertext])
         index = index + 1
 
-    traceRecode.append(middle_hover_trace)
-    #################################################################################################################################################################
+    trace_record.append(middle_hover_trace)
+    ########################################################
     figure = {
-        "data": traceRecode,
+        "data": trace_record,
         "layout": go.Layout(
             title="Interactive Graph Visualization",
             showlegend=False,
@@ -190,23 +200,25 @@ def network_graph(NodeToFilter, TypesToFilter):
             annotations=[
                 dict(
                     ax=(
-                        G.nodes[edge[0]]["pos"][0] + G.nodes[edge[1]]["pos"][0]
+                        graph.nodes[edge[0]]["pos"][0]
+                        + graph.nodes[edge[1]]["pos"][0]
                     )
                     / 2,
                     ay=(
-                        G.nodes[edge[0]]["pos"][1] + G.nodes[edge[1]]["pos"][1]
+                        graph.nodes[edge[0]]["pos"][1]
+                        + graph.nodes[edge[1]]["pos"][1]
                     )
                     / 2,
                     axref="x",
                     ayref="y",
                     x=(
-                        G.nodes[edge[1]]["pos"][0] * 3
-                        + G.nodes[edge[0]]["pos"][0]
+                        graph.nodes[edge[1]]["pos"][0] * 3
+                        + graph.nodes[edge[0]]["pos"][0]
                     )
                     / 4,
                     y=(
-                        G.nodes[edge[1]]["pos"][1] * 3
-                        + G.nodes[edge[0]]["pos"][1]
+                        graph.nodes[edge[1]]["pos"][1] * 3
+                        + graph.nodes[edge[0]]["pos"][1]
                     )
                     / 4,
                     xref="x",
@@ -217,14 +229,14 @@ def network_graph(NodeToFilter, TypesToFilter):
                     arrowwidth=1,
                     opacity=1,
                 )
-                for edge in G.edges
+                for edge in graph.edges
             ],
         ),
     }
     return figure
 
 
-######################################################################################################################################################################
+##########################################################
 # styles: for right side hover/click component
 styles = {
     "pre": {
@@ -237,7 +249,7 @@ styles = {
 
 app.layout = html.Div(
     [
-        #########################Title
+        # Title
         html.Div(
             className="row",
             style={"textAlign": "center"},
@@ -262,7 +274,6 @@ app.layout = html.Div(
                                     options=[{"label": "All", "value": "All"}],
                                     placeholder="Select a node",
                                 ),
-                                # dcc.Input(id="input1", type="text", placeholder="Account"),
                                 html.Div(id="output"),
                             ],
                             style={"height": "100px", "width": "1500px"},
@@ -271,12 +282,11 @@ app.layout = html.Div(
                 ),
             ],
         ),
-        #############################################################################################define the row
+        # define the row
         html.Div(
             className="row",
             children=[
-                ##############################################left side two input components
-                ############################################middle graph component
+                # middle graph component
                 html.Div(
                     className="eight columns",
                     children=[
@@ -286,7 +296,7 @@ app.layout = html.Div(
                         )
                     ],
                 ),
-                #########################################right side two output component
+                # right side two output component
                 html.Div(
                     className="two columns",
                     children=[
@@ -296,10 +306,11 @@ app.layout = html.Div(
                                 dcc.Markdown(
                                     d(
                                         """
-                            **Select Node Types**
+                                        **Select Node Types**
 
-                            To filter particular services/node types.
-                            """
+                                        To filter particular
+                                        services/node types.
+                                        """
                                     )
                                 ),
                                 dcc.Checklist(
@@ -315,10 +326,9 @@ app.layout = html.Div(
                                 dcc.Markdown(
                                     d(
                                         """
-                            **Hover Data**
-                            
-                            Mouse over values in the graph.
-                            """
+                                        **Hover Data**
+                                        Mouse over values in the graph.
+                                        """
                                     )
                                 ),
                                 html.Pre(id="hover-data", style=styles["pre"]),
@@ -338,14 +348,15 @@ app.layout = html.Div(
     dash.dependencies.Input("input1", "search_value"),
 )
 def update_checkbox(input1):
-    global list_of_types
-    # print(list_of_nodes)
-    if input1 == None:
+    """Updates the list of options in the checkbox"""
+    global LIST_OF_TYPES
+    # print(LIST_OF_NODES)
+    if input1 is None:
         input1 = ""
-    if list_of_types == None:
-        list_of_types = [{"label": "All", "value": "All"}]
+    if LIST_OF_TYPES is None:
+        LIST_OF_TYPES = [{"label": "All", "value": "All"}]
 
-    return [{"label": o, "value": o} for o in list_of_types]
+    return [{"label": o, "value": o} for o in LIST_OF_TYPES]
 
 
 @app.callback(
@@ -353,17 +364,18 @@ def update_checkbox(input1):
     dash.dependencies.Input("input1", "search_value"),
 )
 def update_drowpdown(input1):
-    global list_of_nodes
-    # print(list_of_nodes)
-    if input1 == None:
+    """Updates the dropdown"""
+    global LIST_OF_NODES
+    # print(LIST_OF_NODES)
+    if input1 is None:
         input1 = ""
-    if list_of_nodes == None:
-        list_of_nodes = [{"label": "All", "value": "All"}]
+    if LIST_OF_NODES is None:
+        LIST_OF_NODES = [{"label": "All", "value": "All"}]
 
-    return list_of_nodes
+    return LIST_OF_NODES
 
 
-###################################callback for left side components
+# callback for left side components
 @app.callback(
     dash.dependencies.Output("my-graph", "figure"),
     [
@@ -372,31 +384,35 @@ def update_drowpdown(input1):
     ],
 )
 def update_output(input1, chkvalue):
+    """Updates the output"""
+    global ACCOUNT
+    global TYPESTOFILTER
     ACCOUNT = input1
     TYPESTOFILTER = chkvalue
     return network_graph(input1, chkvalue)
-    # to update the global variable of YEAR and ACCOUNT
+    # to update the global variable of TYPESTOFILTER and ACCOUNT
 
 
-################################callback for right side components
+# callback for right side components
 @app.callback(
     dash.dependencies.Output("hover-data", "children"),
     [dash.dependencies.Input("my-graph", "hoverData")],
 )
-def display_hover_data(hoverData):
-    # print(hoverData)
-    if hoverData:
-        hoverData = hoverData["points"][0].get("hovertext")
-        if hoverData:
-            hoverData = (
-                hoverData.replace("<br>", "")
+def display_hover_data(hover_data):
+    """Updates the hover info"""
+    # print(hover_data)
+    if hover_data:
+        hover_data = hover_data["points"][0].get("hovertext")
+        if hover_data:
+            hover_data = (
+                hover_data.replace("<br>", "")
                 .replace("'", '"')
                 .replace("True", "true")
                 .replace("False", "false")
                 .replace("None", "[]")
             )
-            hoverData = json.loads(hoverData)
-    return json.dumps(hoverData, indent=2)
+            hover_data = json.loads(hover_data)
+    return json.dumps(hover_data, indent=2)
 
 
 if __name__ == "__main__":
