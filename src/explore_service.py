@@ -716,12 +716,12 @@ def explore_opensearch(self, service, service_name, project):
 
     # tobedone parse more stuff
     # Getting ACLs
-    ACLs = self.list_service_elasticsearch_acl_config(
+    acls = self.list_service_elasticsearch_acl_config(
         project=project, service=service_name
     )
-    
+
     # If ACLs are not enabled create an edge between each user and each index
-    if not ACLs["elasticsearch_acl_config"]["enabled"]:
+    if not acls["elasticsearch_acl_config"]["enabled"]:
         for user in opensearch["users"]:
             for index in indexes:
                 edges.append(
