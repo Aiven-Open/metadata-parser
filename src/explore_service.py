@@ -1,11 +1,18 @@
 """Explores a service"""
 
-import urllib.parse
-import json
-import re
-import requests
-import psycopg2
-import pymysql
+from src import (
+    backup,
+    kafka,
+    kafka_connect,
+    pg,
+    tag,
+    integration,
+    grafana,
+    redis,
+    mysql,
+    opensearch,
+)
+import traceback
 
 
 SERVICE_MAP = {}
@@ -89,7 +96,7 @@ def explore(self, service_type, service_name, project):
     """Explores a service"""
     edges = []
     nodes = []
-
+    global SERVICE_MAP
     host = "no-host"
     service = self.get_service(project=project, service=service_name)
     if service["state"] != "RUNNING":
@@ -102,35 +109,20 @@ def explore(self, service_type, service_name, project):
             f"Don't know how to explore RUNNING {service_type}"
             f"service {service_name}"
         )
+        print("AAAAA" + traceback.format_exc())
         return nodes, edges
 
     try:
         cloud = service["cloud_name"]
         plan = service["plan"]
-        host, port, newnodes, newedges = explorer_fn(
+        host, port, new_nodes, new_edges, SERVICE_MAP = explorer_fn(
             self, service, service_name, project
         )
 
-        # Disabling this piece for now since it's taking looooong time
-        integrations = self.get_service_integrations(
-            service=service_name, project=project
-        )
-        for integration in integrations:
-            if integration["enabled"] is True:
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
 
-                edges.append(
-                    {
-                        "from": integration["source_service"],
-                        "to": integration["dest_service"],
-                        "main_type": "integration",
-                        "integration_type": integration["integration_type"],
-                        "label": integration["integration_type"],
-                        "integration_id": integration[
-                            "service_integration_id"
-                        ],
-                    }
-                )
-
+        # Setting the node for the service
         nodes.append(
             {
                 "id": service_name,
@@ -143,63 +135,27 @@ def explore(self, service_type, service_name, project):
                 "label": service_name,
             }
         )
+        # Getting integrations
+
+        (new_nodes, new_edges) = integration.explore_integrations(
+            self, service_name, service_type, project
+        )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
 
         # Looking for service tags
 
-        tags = self.list_service_tags(service=service_name, project=project)
-
-        for key, value in tags["tags"].items():
-            nodes.append(
-                {
-                    "id": "tag~id~" + key + "~value~" + value,
-                    "service_type": "tag",
-                    "type": "tag",
-                    "label": key + "=" + value,
-                }
-            )
-            edges.append(
-                {
-                    "from": service_name,
-                    "to": "tag~id~" + key + "~value~" + value,
-                    "label": "tag",
-                }
-            )
-
-        backups = self.get_service_backups(
-            service=service_name, project=project
+        new_nodes, new_edges = tag.explore_tags(
+            self, service_name, service_type, project
         )
-        for backup in backups:
-            nodes.append(
-                {
-                    "id": "service_type~"
-                    + service_type
-                    + "~service_name~"
-                    + service_name
-                    + "~backup~"
-                    + backup["backup_name"],
-                    "label": "backup-" + backup["backup_time"],
-                    "type": "backup",
-                    "service_type": service_type,
-                    **backup,
-                }
-            )
-            edges.append(
-                {
-                    "from": service_name,
-                    "label": "backup",
-                    "to": "service_type~"
-                    + service_type
-                    + "~service_name~"
-                    + service_name
-                    + "~backup~"
-                    + backup["backup_name"],
-                }
-            )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
 
-        if newnodes:
-            nodes = nodes + newnodes
-        if newedges:
-            edges = edges + newedges
+        new_nodes, new_edges = backup.explore_backups(
+            self, service_name, service_type, project
+        )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
 
     except Exception as err:
         print(
@@ -220,7 +176,7 @@ def explore_influxdb(self, service, service_name, project):
     host = service["service_uri_params"]["host"]
     port = service["service_uri_params"]["port"]
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("elasticsearch")
@@ -232,7 +188,7 @@ def explore_elasticsearch(self, service, service_name, project):
     host = service["service_uri_params"]["host"]
     port = service["service_uri_params"]["port"]
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("m3aggregator")
@@ -244,7 +200,7 @@ def explore_m3aggregator(self, service, service_name, project):
     host = service["service_uri_params"]["host"]
     port = service["service_uri_params"]["port"]
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("m3coordinator")
@@ -256,7 +212,7 @@ def explore_m3coordinator(self, service, service_name, project):
     host = service["service_uri_params"]["host"]
     port = service["service_uri_params"]["port"]
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("clickhouse")
@@ -268,7 +224,7 @@ def explore_clickhouse(self, service, service_name, project):
     host = service["service_uri_params"]["host"]
     port = service["service_uri_params"]["port"]
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("kafka_mirrormaker")
@@ -280,7 +236,7 @@ def explore_mirrormaker(self, service, service_name, project):
     port = 443
     print(str(self) + service_name + project)
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("m3db")
@@ -292,55 +248,19 @@ def explore_m3db(self, service, service_name, project):
     port = service["service_uri_params"]["port"]
     print(str(self) + service_name + project)
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("redis")
-def explore_redis(self, service, service_name, project):
+def explore_redis_fun(self, service, service_name, project):
     """Explores an Redis service"""
-    nodes = []
-    edges = []
-    host = service["service_uri_params"]["host"]
-    port = service["service_uri_params"]["port"]
-
-    # Exploring Users and ACL
-    for user in service["users"]:
-        user_node_id = f"redis~{service_name}~user~{user['username']}"
-
-        nodes.append(
-            {
-                "id": user_node_id,
-                "service_type": "redis",
-                "type": "user",
-                "user_type": user["type"],
-                "label": user["username"],
-            }
-        )
-        edges.append(
-            {"from": user_node_id, "to": service_name, "label": "user"}
-        )
-
-        user_acl_info = user["access_control"]
-        acl_node_id = f"redis-user-acl~id~{user['username']}"
-
-        nodes.append(
-            {
-                "id": acl_node_id,
-                "service_type": "user-acl",
-                "type": "acl",
-                "label": user["username"] + "-user-acl",
-                "access_control": user_acl_info,
-            }
-        )
-        edges.append({"from": user_node_id, "to": acl_node_id, "label": "acl"})
-
-    print(str(self) + service_name + project)
-    # need to finish Could query redis and add more parsed data from that
-    return host, port, nodes, edges
+    return redis.explore_redis(
+        self, service, service_name, project, SERVICE_MAP
+    )
 
 
 @add_explorer("cassandra")
-def explore_cassandra(self, service, service_name, project):
+def explore_cassandra_fun(self, service, service_name, project):
     """Explores an InfluxDB service"""
     nodes = []
     edges = []
@@ -348,401 +268,25 @@ def explore_cassandra(self, service, service_name, project):
     port = service["service_uri_params"]["port"]
     print(str(self) + service_name + project)
     # need to finish
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 @add_explorer("grafana")
-def explore_grafana(self, service, service_name, project):
-    """Explores an InfluxDB service"""
-    nodes = []
-    edges = []
-    host = service["service_uri_params"]["host"]
-    port = service["service_uri_params"]["port"]
-    users = service["users"]
-    password = "fake"
-
-    # Parse the users
-    for user in users:
-        # Create node per user
-        nodes.append(
-            {
-                "id": "grafana~" + service_name + "~user~" + user["username"],
-                "user-type": user["type"],
-                "service_type": "grafana",
-                "type": "user",
-                "label": user["username"],
-            }
-        )
-        # Create edge between user and service
-        edges.append(
-            {
-                "from": "grafana~"
-                + service_name
-                + "~user~"
-                + user["username"],
-                "to": service_name,
-                "label": "user",
-            }
-        )
-
-        # Take the password of the avnadmin user for further ispection
-        if user["username"] == "avnadmin":
-            password = user["password"]
-    # Define the base URL
-    base_url = "https://" + service["service_uri_params"]["host"] + ":443"
-
-    # Get datasources
-    datasources_map = {}
-    datasources = requests.get(
-        base_url + "/api/datasources", auth=("avnadmin", password)
-    )
-
-    for datasource in json.loads(datasources.text):
-        # Create a map of the datasources id -> name
-        datasources_map[datasource["uid"]] = datasource["name"]
-        # Create node per datasource
-        nodes.append(
-            {
-                "id": "grafana~"
-                + service_name
-                + "~datasource~"
-                + datasource["name"],
-                "datasource-type": datasource["type"],
-                "service_type": "grafana",
-                "type": "datasource",
-                "label": datasource["name"],
-                "tgt_url": datasource["url"],
-            }
-        )
-        # Create edge between datasource and service
-        edges.append(
-            {
-                "from": "grafana~"
-                + service_name
-                + "~datasource~"
-                + datasource["name"],
-                "to": service_name,
-                "label": "datasource",
-            }
-        )
-
-        # Look for target host
-        target_host = (
-            datasource["url"]
-            .replace("http://", "")
-            .replace("https://", "")
-            .split(":")[0]
-        )
-
-        # Check if the host in the list of target hosts already
-        dest_service = SERVICE_MAP.get(target_host)
-        # If host doesn't exist yet
-        if dest_service is None:
-            # Create new node for external service host
-            nodes.append(
-                {
-                    "id": "ext-src-" + target_host,
-                    "service_type": "ext-service",
-                    "type": "external-service",
-                    "label": target_host,
-                }
-            )
-            # Create new edge between external service host and datasource
-            edges.append(
-                {
-                    "from": "grafana~"
-                    + service_name
-                    + "~datasource~"
-                    + datasource["name"],
-                    "to": "ext-src-" + target_host,
-                    "label": "datasource",
-                }
-            )
-        else:
-            # Create new edge between existing service host and datasource
-            edges.append(
-                {
-                    "from": "grafana~"
-                    + service_name
-                    + "~datasource~"
-                    + datasource["name"],
-                    "to": dest_service,
-                    "label": "datasource",
-                }
-            )
-
-        # In case is PG
-        if datasource["type"] == "postgres":
-            if dest_service is None:
-                # Creates a database node in the external service
-                nodes.append(
-                    {
-                        "id": "ext-src-"
-                        + dest_service
-                        + "~db~"
-                        + datasource["database"],
-                        "service_type": "ext-pg",
-                        "type": "database",
-                        "label": datasource["database"],
-                    }
-                )
-                # Creates an edge between the database and the datasource
-                edges.append(
-                    {
-                        "from": "grafana~"
-                        + service_name
-                        + "~datasource~"
-                        + datasource["name"],
-                        "to": "ext-src-"
-                        + dest_service
-                        + "~db~"
-                        + datasource["database"],
-                        "label": "datasource",
-                    }
-                )
-            else:
-                # Creates an edge between the database and the datasource
-                edges.append(
-                    {
-                        "from": "grafana~"
-                        + service_name
-                        + "~datasource~"
-                        + datasource["name"],
-                        "to": "pg~"
-                        + dest_service
-                        + "~database~"
-                        + datasource["database"],
-                        "label": "datasource",
-                    }
-                )
-
-    # getting dashboards
-    dashboards = requests.get(
-        base_url + "/api/search?dash-folder", auth=("avnadmin", password)
-    )
-
-    for dashboard in json.loads(dashboards.text):
-        # Creates a node for the dashboard
-        nodes.append(
-            {
-                "id": "grafana~"
-                + service_name
-                + "~dashboard~"
-                + dashboard["title"],
-                "service_type": "grafana",
-                "type": "dashboard",
-                "label": dashboard["title"],
-            }
-        )
-        # Creates an edge between service name and dashboard
-        edges.append(
-            {
-                "from": "grafana~"
-                + service_name
-                + "~dashboard~"
-                + dashboard["title"],
-                "to": service_name,
-                "label": "dashboard",
-            }
-        )
-        # gets the dashboard details
-
-        dashboard_details = requests.get(
-            base_url + "/api/dashboards/uid/" + dashboard["uid"],
-            auth=("avnadmin", password),
-        )
-
-        dash_details = json.loads(dashboard_details.text)
-        # Adds edge between dashboard and creator
-        edges.append(
-            {
-                "from": "grafana~"
-                + service_name
-                + "~dashboard~"
-                + dashboard["title"],
-                "to": "grafana~"
-                + service_name
-                + "~user~"
-                + dash_details["meta"]["createdBy"],
-                "type": "dashboard-creator",
-                "label": "dashboard-creator",
-            }
-        )
-
-        # A dashboard can have rows defined or not
-        if dash_details["dashboard"].get("rows") is not None:
-            for row in dash_details["dashboard"]["rows"]:
-                # Looks for panels in the dashboard
-                for panel in row["panels"]:
-
-                    if isinstance(panel["datasource"], str):
-                        datasource = panel["datasource"]
-                        # Creates an edge between the dashboard and datasource
-                        edges.append(
-                            {
-                                "from": "grafana~"
-                                + service_name
-                                + "~dashboard~"
-                                + dashboard["title"],
-                                "to": "grafana~"
-                                + service_name
-                                + "~datasource~"
-                                + datasource,
-                                "label": "dashboard datasource",
-                            }
-                        )
-                    else:
-                        datasource = panel["datasource"]["uid"]
-                        # Creates an edge between the dashboard and datasource
-                        edges.append(
-                            {
-                                "from": "grafana~"
-                                + service_name
-                                + "~dashboard~"
-                                + dashboard["title"],
-                                "to": "grafana~"
-                                + service_name
-                                + "~datasource~"
-                                + datasources_map[datasource],
-                                "label": "dashboard datasource",
-                            }
-                        )
-                    # tobedone explore all columns in a dashboard panel
-        else:
-            for panel in dash_details["dashboard"]["panels"]:
-                if isinstance(panel["datasource"], str):
-                    datasource = panel["datasource"]
-                    # Creates an edge between the dashboard and datasource
-                    edges.append(
-                        {
-                            "from": "grafana~"
-                            + service_name
-                            + "~dashboard~"
-                            + dashboard["title"],
-                            "to": "grafana~"
-                            + service_name
-                            + "~datasource~"
-                            + datasource,
-                            "label": "dashboard datasource",
-                        }
-                    )
-                elif isinstance(panel["datasource"], dict):
-                    datasource = panel["datasource"]["uid"]
-                    # Creates an edge between the dashboard and datasource
-                    edges.append(
-                        {
-                            "from": "grafana~"
-                            + service_name
-                            + "~dashboard~"
-                            + dashboard["title"],
-                            "to": "grafana~"
-                            + service_name
-                            + "~datasource~"
-                            + datasources_map[datasource],
-                            "label": "dashboard datasource",
-                        }
-                    )
-                print(str(self) + service_name + project)
-                # need to finish, explore all columns in a dashboard panel
-    return host, port, nodes, edges
+def explore_grafana_fun(self, service, service_name, project):
+    """Explores an Grafana service"""
+    return grafana.explore_grafana(service, service_name, SERVICE_MAP)
 
 
 @add_explorer("opensearch")
-def explore_opensearch(self, service, service_name, project):
+def explore_opensearch_fun(self, service, service_name, project):
     """Explores an OpenSearch service"""
-    nodes = []
-    edges = []
-    host = service["service_uri_params"]["host"]
-    port = service["service_uri_params"]["port"]
-
-    opensearch = self.get_service(project=project, service=service_name)
-
-    # Exploring Users
-    for user in opensearch["users"]:
-
-        nodes.append(
-            {
-                "id": "opensearch~"
-                + service_name
-                + "~user~"
-                + user["username"],
-                "service_type": "opensearch",
-                "type": "user",
-                "user_type": user["type"],
-                "label": user["username"],
-            }
-        )
-        edges.append(
-            {
-                "from": "opensearch~"
-                + service_name
-                + "~user~"
-                + user["username"],
-                "to": service_name,
-                "label": "user",
-            }
-        )
-
-    # Getting indexes
-    indexes = self.get_service_indexes(project=project, service=service_name)
-    for index in indexes:
-
-        # CReating node for index
-        nodes.append(
-            {
-                "id": "opensearch~"
-                + service_name
-                + "~index~"
-                + index["index_name"],
-                "service_type": "opensearch",
-                "type": "index",
-                "label": index["index_name"],
-                "health": index["health"],
-                "replicas": index["number_of_replicas"],
-                "shards": index["number_of_shards"],
-            }
-        )
-        # Creating edge between index and service
-        edges.append(
-            {
-                "from": "opensearch~"
-                + service_name
-                + "~index~"
-                + index["index_name"],
-                "to": service_name,
-                "label": "index",
-            }
-        )
-
-    # tobedone parse more stuff
-    # Getting ACLs
-    acls = self.list_service_elasticsearch_acl_config(
-        project=project, service=service_name
+    return opensearch.explore_opensearch(
+        self, service, service_name, project, SERVICE_MAP
     )
-
-    # If ACLs are not enabled create an edge between each user and each index
-    if not acls["elasticsearch_acl_config"]["enabled"]:
-        for user in opensearch["users"]:
-            for index in indexes:
-                edges.append(
-                    {
-                        "from": "opensearch~"
-                        + service_name
-                        + "~index~"
-                        + index["index_name"],
-                        "to": "opensearch~"
-                        + service_name
-                        + "~user~"
-                        + user["username"],
-                        "label": "visibility_index",
-                    }
-                )
-    # tobedone: check how to parse everything when ACLs are set
-    return host, port, nodes, edges
 
 
 @add_explorer("flink")
-def explore_flink(self, service, service_name, project):
+def explore_flink_fun(self, service, service_name, project):
     """Explores an Apache Flink service"""
     nodes = []
     edges = []
@@ -905,897 +449,44 @@ def explore_flink(self, service, service_name, project):
         )
         # tobedone: once the api returns the Flink tables used for the job,
         # create edges between tables and jobs
-    return host, port, nodes, edges
+    return host, port, nodes, edges, SERVICE_MAP
 
 
 # Exploring Kafka Services
 
 
 @add_explorer("kafka")
-def explore_kafka(self, service, service_name, project):
+def explore_kafka_fun(self, service, service_name, project):
     """Explores an Apache Kafka service"""
-    nodes = []
-    edges = []
-    host = service["service_uri_params"]["host"]
-
-    topics = self.list_service_topics(service=service_name, project=project)
-    topic_list = []
-
-    # Exploring Topics
-    for topic in topics:
-
-        nodes.append(
-            {
-                "id": "kafka~"
-                + service_name
-                + "~topic~"
-                + topic["topic_name"],
-                "service_type": "kafka",
-                "type": "topic",
-                "cleanup_policy": topic["cleanup_policy"],
-                "label": topic["topic_name"],
-            }
-        )
-        edges.append(
-            {
-                "from": "kafka~"
-                + service_name
-                + "~topic~"
-                + topic["topic_name"],
-                "to": service_name,
-                "label": "topic",
-            }
-        )
-        topic_list.append(topic["topic_name"])
-
-        for tag in topic["tags"]:
-            nodes.append(
-                {
-                    "id": "tag~id~" + tag["key"] + "~value~" + tag["value"],
-                    "service_type": "tag",
-                    "type": "tag",
-                    "label": tag["key"] + "=" + tag["value"],
-                }
-            )
-            edges.append(
-                {
-                    "from": "kafka~"
-                    + service_name
-                    + "~topic~"
-                    + topic["topic_name"],
-                    "to": "tag~id~" + tag["key"] + "~value~" + tag["value"],
-                    "label": "tag",
-                }
-            )
-
-    kafka = self.get_service(project=project, service=service_name)
-
-    # Exploring Users
-    for user in kafka["users"]:
-
-        nodes.append(
-            {
-                "id": "kafka~" + service_name + "~user~" + user["username"],
-                "service_type": "kafka",
-                "type": "user",
-                "user_type": user["type"],
-                "label": user["username"],
-            }
-        )
-        edges.append(
-            {
-                "from": "kafka~" + service_name + "~user~" + user["username"],
-                "to": service_name,
-                "label": "user",
-            }
-        )
-
-    # Exploring ACLs
-    for acl in kafka["acl"]:
-        # Create node for ACL
-        nodes.append(
-            {
-                "id": "kafka~" + service_name + "~acl~" + acl["id"],
-                "service_type": "kafka",
-                "type": "topic-acl",
-                "permission": acl["permission"],
-                "label": acl["id"],
-                "topic": acl["topic"],
-                "username": acl["username"],
-            }
-        )
-        # Create edge between ACL and username
-        edges.append(
-            {
-                "from": "kafka~" + service_name + "~user~" + acl["username"],
-                "to": "kafka~" + service_name + "~acl~" + acl["id"],
-                "label": "user",
-            }
-        )
-        # Map topics that an ACL shows
-        for topic in topic_list:
-            strtomatch = acl["topic"]
-            if strtomatch == "*":
-                strtomatch = ".*"
-            # Checking if the ACL string matches a topic
-            # ACL strings are defined with Java RegExp
-            # and we're parsing them with Python,
-            # maybe something to improve here?
-            if re.match(strtomatch, topic):
-                edges.append(
-                    {
-                        "from": "kafka~" + service_name + "~acl~" + acl["id"],
-                        "to": "kafka~" + service_name + "~topic~" + topic,
-                        "label": "topic-acl",
-                    }
-                )
-
-    # If the service has Kafka connect, we can explore it as well
-    if kafka["user_config"]["kafka_connect"] is True:
-        _, _, newnodes, newedges = explore_kafka_connect(
-            self, None, service_name, project
-        )
-        nodes = nodes + newnodes
-        edges = edges + newedges
-
-    return host, service, nodes, edges
+    return kafka.explore_kafka(
+        self, service, service_name, project, SERVICE_MAP
+    )
 
 
 # Exploring Kafka Services
 
 
 @add_explorer("kafka_connect")
-def explore_kafka_connect(self, service, service_name, project):
+def explore_kafka_connect_fun(self, service, service_name, project):
     """Explore a Kafka Connect service.
 
     Note that `service` will be None if we're called from explore_kafka
     """
-    nodes = []
-    edges = []
-    if service is None:
-        service_type = "kafka"
-        host = None
-        port = None
-    else:
-        service_type = "kafka_connect"
-        host = service["service_uri_params"]["host"]
-        port = service["service_uri_params"]["port"]
-
-    # The service map allows to indetify if the source/target
-    # of a connector is within aiven or external
-    global SERVICE_MAP
-    connectors = self.list_kafka_connectors(
-        service=service_name, project=project
+    return kafka_connect.explore_kafka_connect(
+        self, service, service_name, project, SERVICE_MAP
     )
-
-    # Getting connectors
-    for connector in connectors["connectors"]:
-        # Checking connector properties
-        properties = {
-            "id": service_type
-            + "~"
-            + service_name
-            + "~connect~"
-            + connector["config"]["name"],
-            "service_type": service_type,
-            "type": "kafka-connect",
-            "label": connector["config"]["name"],
-            "class": connector["config"]["connector.class"],
-        }
-
-        ##########################################
-        # Debezium PostgreSQL conector           #
-        ##########################################
-        if (
-            connector["config"]["connector.class"]
-            == "io.debezium.connector.postgresql.PostgresConnector"
-        ):
-            target_host = connector["config"]["database.hostname"]
-            target_service = SERVICE_MAP.get(target_host)
-            # Looks for the target service to be in Aiven,
-            # if None, creates a new node for the target service
-            if target_service is None:
-                target_service = "ext-pg-" + target_host
-                # Create node for New service
-                nodes.append(
-                    {
-                        "id": "ext-pg-" + target_host,
-                        "service_type": "ext-pg",
-                        "type": "external-postgresql",
-                        "label": "ext-pg-" + target_host,
-                    }
-                )
-                tables = connector["config"]["table.include.list"].split(",")
-                for table in tables:
-                    # schema is the first part of the table
-                    schema = table.split(".")[0]
-                    # table_name is the second part of the table
-                    table_name = table.split(".")[1]
-                    # Create node for the schema
-                    nodes.append(
-                        {
-                            "id": "ext-pg-"
-                            + target_host
-                            + "~schema~"
-                            + schema,
-                            "service_type": "ext-pg-schema",
-                            "type": "external-postgresql-schema",
-                            "label": schema,
-                        }
-                    )
-                    # Create node for the table
-                    nodes.append(
-                        {
-                            "id": "ext-pg-"
-                            + target_host
-                            + "~schema~"
-                            + schema
-                            + "~table~"
-                            + table_name,
-                            "service_type": "ext-pg-table",
-                            "type": "external-postgresql-table",
-                            "label": table_name,
-                        }
-                    )
-                    # Create edge from schema to table
-                    edges.append(
-                        {
-                            "from": "ext-pg-"
-                            + target_host
-                            + "~schema~"
-                            + schema,
-                            "to": "ext-pg-"
-                            + target_host
-                            + "~schema~"
-                            + schema
-                            + "~table~"
-                            + table_name,
-                        }
-                    )
-                    # Create edge from host to schema
-                    edges.append(
-                        {
-                            "from": "ext-pg-" + target_host,
-                            "to": "ext-pg-"
-                            + target_host
-                            + "~schema~"
-                            + schema,
-                        }
-                    )
-                    # Create edge from connector to source table
-                    edges.append(
-                        {
-                            "from": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "to": "ext-pg-"
-                            + target_host
-                            + "~schema~"
-                            + schema
-                            + "~table~"
-                            + table_name,
-                        }
-                    )
-                    # Find the kafka instance that the connector
-                    # is pushing/taking data from
-                    (serv_name, serv_type) = find_kafka_service_from_connect(
-                        self, service_name, service_type, project
-                    )
-                    # Create edge from connector to target topic
-                    edges.append(
-                        {
-                            "from": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "to": serv_type
-                            + "~"
-                            + serv_name
-                            + "~topic~"
-                            + connector["config"]["database.server.name"]
-                            + "."
-                            + table,
-                            "label": "kafka-connect-connector",
-                        }
-                    )
-                SERVICE_MAP[target_host] = "ext-pg-" + target_host
-            # Looks for the target is in Aiven, connecting it
-            else:
-                tables = connector["config"]["table.include.list"].split(",")
-                for table in tables:
-                    # schema is the first part of the table
-                    schema = table.split(".")[0]
-                    # table_name is the second part of the table
-                    table_name = table.split(".")[1]
-                    # Create an edge betwen the connector and the pg table
-                    edges.append(
-                        {
-                            "from": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "to": "pg~"
-                            + target_service
-                            + "~schema~"
-                            + schema
-                            + "~table~"
-                            + table_name,
-                            "label": "table",
-                        }
-                    )
-                    # Create an edge betwen the connector
-                    # and the kafka connect service
-                    edges.append(
-                        {
-                            "from": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "to": service_name,
-                            "label": "kafka-connect-connector",
-                        }
-                    )
-                    # Find the kafka instance that
-                    # the connector is pushing/taking data from
-                    (serv_name, serv_type) = find_kafka_service_from_connect(
-                        self, service_name, service_type, project
-                    )
-                    # Create an edge betwen
-                    # the connector and the source kafka topic
-                    edges.append(
-                        {
-                            "from": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "to": serv_type
-                            + "~"
-                            + serv_name
-                            + "~topic~"
-                            + connector["config"]["database.server.name"]
-                            + "."
-                            + table,
-                            "label": "kafka-connect-connector",
-                        }
-                    )
-
-        #####################
-        # Opensearch sink   #
-        #####################
-        if (
-            connector["config"]["connector.class"]
-            == "io.aiven.kafka.connect.opensearch.OpensearchSinkConnector"
-        ):
-            target_host = urllib.parse.urlparse(
-                connector["config"]["connection.url"]
-            ).hostname
-            print(target_host)
-            target_service = SERVICE_MAP.get(target_host)
-
-            # Looks for the target service to be in Aiven,
-            # if None, creates a new node for the target service
-            if target_service is None:
-                print("NOT FOUUUUND!!!!!!!!!!!!!!!" + target_host)
-                # tobedone What should we create in case
-                # we don't find the target Opensearch?
-            else:
-                # Add edge to source service
-                edges.append(
-                    {
-                        "from": service_type
-                        + "~"
-                        + service_name
-                        + "~connect~"
-                        + connector["config"]["name"],
-                        "to": service_name,
-                        "label": "kafka-connect-connector",
-                    }
-                )
-                for topic in connector["config"]["topics"].split(","):
-                    # Find the kafka instance that
-                    # the connector is pushing/taking data from
-                    (serv_name, serv_type) = find_kafka_service_from_connect(
-                        self, service_name, service_type, project
-                    )
-                    # Add edge to source topic
-                    edges.append(
-                        {
-                            "from": serv_type
-                            + "~"
-                            + serv_name
-                            + "~topic~"
-                            + topic,
-                            "to": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "label": "kafka-connect-connector",
-                        }
-                    )
-                    # Add edge to destination opensearch index
-                    edges.append(
-                        {
-                            "from": service_type
-                            + "~"
-                            + service_name
-                            + "~connect~"
-                            + connector["config"]["name"],
-                            "to": "opensearch~"
-                            + target_service
-                            + "~index~"
-                            + topic,
-                            "label": "kafka-connect-connector",
-                        }
-                    )
-
-        nodes.append(properties)
-
-    return host, port, nodes, edges
-
-
-# Find the kafka instance that
-# the connector is pushing/taking data from/to
-
-
-def find_kafka_service_from_connect(self, service_name, service_type, project):
-    """
-    Finds a Kafka service from its connect endpoint
-    """
-    serv_type = service_type
-    serv_name = service_name
-    if serv_type == "kafka_connect":
-        serv_type = "kafka"
-        integrations = self.get_service_integrations(
-            service=service_name, project=project
-        )
-        for integration in integrations:
-            if (
-                integration["enabled"] is True
-                and integration["integration_type"] == "kafka_connect"
-            ):
-                serv_name = integration["source_service"]
-    return serv_name, serv_type
 
 
 @add_explorer("mysql")
-def explore_mysql(self, service, service_name, project):
+def explore_mysql_fun(self, service, service_name, project):
     """Explores an MySQL service"""
-    nodes = []
-    edges = []
-    host = service["connection_info"]["mysql_params"][0]["host"]
-    port = service["connection_info"]["mysql_params"][0]["port"]
-
-    # Get the avnadmin password
-    # this is in case someone creates the service
-    # and then changes avnadmin password
-    avnadmin_pwd = list(
-        filter(lambda x: x["username"] == "avnadmin", service["users"])
-    )[0]["password"]
-
-    service_conn_info = service["service_uri_params"]
-
-    try:
-        conn = pymysql.connect(
-            host=service_conn_info["host"],
-            port=int(service_conn_info["port"]),
-            database=service_conn_info["dbname"],
-            user="avnadmin",
-            password=avnadmin_pwd,
-            connect_timeout=2,
-        )
-    except pymysql.Error as err:
-        conn = None
-        print("Error connecting to: " + service_name + str(err))
-        nodes.append(
-            {
-                "id": "mysql~" + service_name + "~connection-error",
-                "service_type": "mysql",
-                "type": "connection-error",
-                "label": "connection-error",
-            }
-        )
-        edges.append(
-            {
-                "from": service_name,
-                "to": "mysql~" + service_name + "~connection-error",
-                "label": "connection-error",
-            }
-        )
-
-    if conn is not None:
-        cur = conn.cursor()
-
-        # Getting databases
-        cur.execute(
-            """
-            select catalog_name, schema_name
-            from information_schema.schemata;
-            """
-        )
-
-        databases = cur.fetchall()
-        for database in databases:
-            # print(database)
-            nodes.append(
-                {
-                    "id": "mysql~" + service_name + "~database~" + database[1],
-                    "service_type": "mysql",
-                    "type": "database",
-                    "label": database[1],
-                }
-            )
-            edges.append(
-                {
-                    "from": service_name,
-                    "to": "mysql~" + service_name + "~database~" + database[1],
-                    "label": "database",
-                }
-            )
-
-        # Getting tables
-        cur.execute(
-            """
-            select TABLE_SCHEMA,TABLE_NAME, TABLE_TYPE
-            from information_schema.tables
-            where table_schema not in
-            ('information_schema','sys','performance_schema','mysql');
-            """
-        )
-
-        tables = cur.fetchall()
-        for table in tables:
-            nodes.append(
-                {
-                    "id": "mysql~"
-                    + service_name
-                    + "~database~"
-                    + table[0]
-                    + "~table~"
-                    + table[1],
-                    "service_type": "mysql",
-                    "type": "table",
-                    "label": table[1],
-                    "table_type": table[2],
-                }
-            )
-            edges.append(
-                {
-                    "from": "mysql~" + service_name + "~database~" + table[0],
-                    "to": "mysql~"
-                    + service_name
-                    + "~database~"
-                    + table[0]
-                    + "~table~"
-                    + table[1],
-                    "label": "table",
-                }
-            )
-
-        # Get users
-        cur.execute(
-            """
-            select USER, HOST, ATTRIBUTE
-            from information_schema.USER_ATTRIBUTES;
-            """
-        )
-
-        users = cur.fetchall()
-        # print(users)
-        for user in users:
-            nodes.append(
-                {
-                    "id": "mysql~" + service_name + "~user~" + user[0],
-                    "service_type": "mysql",
-                    "type": "user",
-                    "label": user[0],
-                }
-            )
-            edges.append(
-                {
-                    "from": "mysql~" + service_name + "~user~" + user[0],
-                    "to": service_name,
-                    "label": "user",
-                }
-            )
-
-        # Get User Priviledges
-
-        # tobedone  get user priviledges to tables
-
-        # Get Columns
-        cur.execute(
-            """
-            select TABLE_SCHEMA,TABLE_NAME,COLUMN_NAME,IS_NULLABLE,DATA_TYPE
-            from information_schema.columns where table_schema
-            not in ('information_schema', 'sys','mysql','performance_schema');
-            """
-        )
-
-        columns = cur.fetchall()
-        for column in columns:
-            nodes.append(
-                {
-                    "id": "mysql~"
-                    + service_name
-                    + "~database~"
-                    + column[0]
-                    + "~table~"
-                    + column[1]
-                    + "~column~"
-                    + column[2],
-                    "service_type": "mysql",
-                    "type": "table column",
-                    "data_type": column[4],
-                    "is_nullable": column[3],
-                    "label": column[2],
-                }
-            )
-            edges.append(
-                {
-                    "from": "mysql~"
-                    + service_name
-                    + "~database~"
-                    + column[0]
-                    + "~table~"
-                    + column[1]
-                    + "~column~"
-                    + column[2],
-                    "to": "mysql~"
-                    + service_name
-                    + "~database~"
-                    + column[0]
-                    + "~table~"
-                    + column[1],
-                    "label": "column",
-                }
-            )
-
-    return host, port, nodes, edges
+    return mysql.explore_mysql(service, service_name, SERVICE_MAP)
 
 
 @add_explorer("pg")
-def explore_pg(self, service, service_name, project):
+def explore_pg_fun(self, service, service_name, project):
     """Explores an PG service"""
-    nodes = []
-    edges = []
-    host = service["connection_info"]["pg_params"][0]["host"]
-    port = service["connection_info"]["pg_params"][0]["port"]
-
-    service = self.get_service(project=project, service=service_name)
-
-    # Get the avnadmin password
-    # this is in case someone creates the service
-    # and then changes avnadmin password
-    avnadmin_pwd = list(
-        filter(lambda x: x["username"] == "avnadmin", service["users"])
-    )[0]["password"]
-
-    service_conn_info = service["connection_info"]["pg_params"][0]
-    # Build the connection string
-    connstr = (
-        "postgres://avnadmin:"
-        + avnadmin_pwd
-        + "@"
-        + service_conn_info["host"]
-        + ":"
-        + service_conn_info["port"]
-        + "/"
-        + service_conn_info["dbname"]
-        + "?sslmode="
-        + service_conn_info["sslmode"]
-    )
-
-    try:
-        conn = psycopg2.connect(connstr, connect_timeout=2)
-    except psycopg2.Error as err:
-        conn = None
-        print("Error connecting to: " + service_name + str(err))
-        nodes.append(
-            {
-                "id": "pg~" + service_name + "~connection-error",
-                "service_type": "pg",
-                "type": "connection-error",
-                "label": "connection-error",
-            }
-        )
-        edges.append(
-            {
-                "from": service_name,
-                "to": "pg~" + service_name + "~connection-error",
-                "label": "connection-error",
-            }
-        )
-
-    if conn is not None:
-        cur = conn.cursor()
-        cur.execute("SELECT datname FROM pg_database;")
-
-        databases = cur.fetchall()
-        for database in databases:
-            # print(database)
-            nodes.append(
-                {
-                    "id": "pg~" + service_name + "~database~" + database[0],
-                    "service_type": "pg",
-                    "type": "database",
-                    "label": database[0],
-                }
-            )
-            edges.append(
-                {
-                    "from": service_name,
-                    "to": "pg~" + service_name + "~database~" + database[0],
-                    "label": "database",
-                }
-            )
-
-        cur.execute(
-            """
-            select catalog_name, schema_name, schema_owner
-            from information_schema.schemata;
-            """
-        )
-
-        namespaces = cur.fetchall()
-        for namespace in namespaces:
-            nodes.append(
-                {
-                    "id": "pg~" + service_name + "~schema~" + namespace[1],
-                    "service_type": "pg",
-                    "type": "schema",
-                    "label": namespace[1],
-                }
-            )
-            edges.append(
-                {
-                    "from": "pg~" + service_name + "~database~" + namespace[0],
-                    "to": "pg~" + service_name + "~schema~" + namespace[1],
-                    "label": "schema",
-                }
-            )
-
-        cur.execute(
-            """
-            SELECT schemaname, tablename, tableowner
-            FROM pg_tables where tableowner <> 'postgres';
-            """
-        )
-
-        tables = cur.fetchall()
-        for table in tables:
-            nodes.append(
-                {
-                    "id": "pg~"
-                    + service_name
-                    + "~schema~"
-                    + table[0]
-                    + "~table~"
-                    + table[1],
-                    "service_type": "pg",
-                    "type": "table",
-                    "label": table[1],
-                }
-            )
-            edges.append(
-                {
-                    "from": "pg~" + service_name + "~schema~" + table[0],
-                    "to": "pg~"
-                    + service_name
-                    + "~schema~"
-                    + table[0]
-                    + "~table~"
-                    + table[1],
-                    "label": "table",
-                }
-            )
-
-        cur.execute("SELECT * FROM pg_user;")
-
-        users = cur.fetchall()
-        # print(users)
-        for user in users:
-            nodes.append(
-                {
-                    "id": "pg~" + service_name + "~user~" + user[0],
-                    "service_type": "pg",
-                    "type": "user",
-                    "label": user[0],
-                }
-            )
-            edges.append(
-                {
-                    "from": "pg~" + service_name + "~user~" + user[0],
-                    "to": service_name,
-                    "label": "user",
-                }
-            )
-
-        cur.execute(
-            """
-            SELECT grantee, table_schema, table_name,
-            privilege_type,is_grantable
-            FROM information_schema.role_table_grants;
-            """
-        )
-
-        role_table_grants = cur.fetchall()
-
-        for role_table_grant in role_table_grants:
-            edges.append(
-                {
-                    "from": "pg~"
-                    + service_name
-                    + "~user~"
-                    + role_table_grant[0],
-                    "to": "pg~"
-                    + service_name
-                    + "~schema~"
-                    + role_table_grant[1]
-                    + "~table~"
-                    + role_table_grant[2],
-                    "label": "grant",
-                    "privilege_type": role_table_grant[3],
-                    "is_grantable": role_table_grant[4],
-                }
-            )
-
-        cur.execute(
-            """
-            select table_catalog, table_schema, table_name, column_name,
-            data_type, is_nullable from information_schema.columns
-            where table_schema not in ('information_schema', 'pg_catalog');
-            """
-        )
-
-        columns = cur.fetchall()
-        for column in columns:
-            nodes.append(
-                {
-                    "id": "pg~"
-                    + service_name
-                    + "~schema~"
-                    + column[1]
-                    + "~table~"
-                    + column[2]
-                    + "~column~"
-                    + column[3],
-                    "service_type": "pg",
-                    "type": "table column",
-                    "data_type": column[4],
-                    "is_nullable": column[5],
-                    "label": column[3],
-                }
-            )
-            edges.append(
-                {
-                    "from": "pg~"
-                    + service_name
-                    + "~schema~"
-                    + column[1]
-                    + "~table~"
-                    + column[2]
-                    + "~column~"
-                    + column[3],
-                    "to": "pg~"
-                    + service_name
-                    + "~schema~"
-                    + column[1]
-                    + "~table~"
-                    + column[2],
-                    "label": "column",
-                }
-            )
-
-        cur.close()
-        conn.close()
-    return host, port, nodes, edges
+    return pg.explore_pg(self, service, service_name, project, SERVICE_MAP)
 
 
 def explore_ext_endpoints(self, project):
