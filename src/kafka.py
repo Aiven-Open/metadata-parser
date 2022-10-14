@@ -30,6 +30,8 @@ def explore_kafka(self, service, service_name, project, service_map):
     nodes = nodes + new_nodes
     edges = edges + new_edges
 
+    # tbd parse schemas
+
     # If the service has Kafka connect, we can explore it as well
     if kafka["user_config"]["kafka_connect"] is True:
         (
@@ -58,6 +60,10 @@ def explore_kafka_topics(self, service_name, project):
     # Exploring Topics
     for topic in topics:
 
+        topic_infos = self.get_service_topic(
+            project=project, service=service_name, topic=topic["topic_name"]
+        )
+        # print(topic_infos)
         nodes.append(
             {
                 "id": "kafka~"
@@ -68,6 +74,13 @@ def explore_kafka_topics(self, service_name, project):
                 "type": "topic",
                 "cleanup_policy": topic["cleanup_policy"],
                 "label": topic["topic_name"],
+                "partitions": topic_infos.get("partitions"),
+                "min_insync_replicas": topic_infos.get("min_insync_replicas"),
+                "replication": topic_infos.get("replication"),
+                "retention_bytes": topic_infos.get("retention_bytes"),
+                "retention_hours": topic_infos.get("retention_hours"),
+                "state": topic_infos.get("state"),
+                "config": topic_infos.get("config"),
             }
         )
         edges.append(
@@ -81,6 +94,9 @@ def explore_kafka_topics(self, service_name, project):
             }
         )
         topic_list.append(topic["topic_name"])
+        # explore_kafka_topic_details(
+        #    self, service_name, project, topic["topic_name"]
+        # )
 
         for tag in topic["tags"]:
             nodes.append(
