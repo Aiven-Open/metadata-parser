@@ -63,7 +63,7 @@ def explore_kafka_topics(self, service_name, project):
         topic_infos = self.get_service_topic(
             project=project, service=service_name, topic=topic["topic_name"]
         )
-        # print(topic_infos)
+
         nodes.append(
             {
                 "id": "kafka~"
@@ -94,9 +94,12 @@ def explore_kafka_topics(self, service_name, project):
             }
         )
         topic_list.append(topic["topic_name"])
-        # explore_kafka_topic_details(
-        #    self, service_name, project, topic["topic_name"]
-        # )
+
+        new_nodes, new_edges = explore_kafka_topic_partitions(
+            service_name, topic["topic_name"], topic_infos["partitions"]
+        )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
 
         for tag in topic["tags"]:
             nodes.append(
@@ -193,4 +196,105 @@ def explore_kafka_acls(self, service_name, project, topic_list):
                         "label": "topic-acl",
                     }
                 )
+    return nodes, edges
+
+
+def explore_kafka_topic_partitions(service_name, topic_name, partitions):
+    """Getting Kafka topic partitions"""
+    nodes = []
+    edges = []
+
+    # Exploring partitions
+    for partition in partitions:
+        # Create node for partition
+
+        nodes.append(
+            {
+                "id": "kafka~"
+                + service_name
+                + "~topic~"
+                + topic_name
+                + "~partition~"
+                + str(partition["partition"]),
+                "service_type": "kafka",
+                "type": "partition",
+                "earliest_offset": partition["earliest_offset"],
+                "isr": partition["isr"],
+                "latest_offset": partition["latest_offset"],
+                "size": partition["size"],
+                "label": "Partition " + str(partition["partition"]),
+            }
+        )
+
+        # Create edge between partition and topic
+        edges.append(
+            {
+                "from": "kafka~"
+                + service_name
+                + "~topic~"
+                + topic_name
+                + "~partition~"
+                + str(partition["partition"]),
+                "to": "kafka~" + service_name + "~topic~" + topic_name,
+                "label": "partition",
+            }
+        )
+
+        new_nodes, new_edges = explore_kafka_topic_partitions_consumer_groups(
+            service_name,
+            topic_name,
+            partition["partition"],
+            partition["consumer_groups"],
+        )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
+    return nodes, edges
+
+
+def explore_kafka_topic_partitions_consumer_groups(
+    service_name, topic_name, partition, consumers
+):
+    """Getting Kafka topic partitions consumer group info"""
+    nodes = []
+    edges = []
+
+    # Exploring partitions
+    for consumer in consumers:
+        # Create node for partition
+        nodes.append(
+            {
+                "id": "kafka~"
+                + service_name
+                + "~topic~"
+                + topic_name
+                + "~partition~"
+                + str(partition)
+                + "~consumer_group~"
+                + consumer["group_name"],
+                "offset": consumer["offset"],
+                "label": consumer["group_name"],
+                "type": "consumer_group",
+                "service_type": "kafka",
+            }
+        )
+        # Create edge between partition and username
+        edges.append(
+            {
+                "from": "kafka~"
+                + service_name
+                + "~topic~"
+                + topic_name
+                + "~partition~"
+                + str(partition)
+                + "~consumer_group~"
+                + consumer["group_name"],
+                "to": "kafka~"
+                + service_name
+                + "~topic~"
+                + topic_name
+                + "~partition~"
+                + str(partition),
+                "label": "Consumer group:" + consumer["group_name"],
+            }
+        )
     return nodes, edges
