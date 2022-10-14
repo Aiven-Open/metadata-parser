@@ -25,7 +25,9 @@ colors["datasource"] = "#0000cc"
 colors["index"] = "#0000cc"
 colors["connection-error"] = "#0000cc"
 colors["tag"] = "#0000cc"
-colors["backup"] = "#0000cc"
+colors["backup"] = "cccccc"
+colors["consumer_group"] = "#0000cc"
+colors["partition"] = "#0000cc"
 
 
 sizes = {}
@@ -52,6 +54,8 @@ sizes["index"] = 15
 sizes["connection-error"] = 15
 sizes["tag"] = 10
 sizes["backup"] = 10
+sizes["consumer_group"] = 10
+sizes["partition"] = 10
 
 
 images = {}
@@ -79,6 +83,8 @@ images["index"] = "img/table.png"
 images["connection-error"] = "img/warning.png"
 images["tag"] = "img/tag.png"
 images["backup"] = "img/database.png"
+images["consumer_group"] = "img/user.png"
+images["partition"] = "img/layout.png"
 
 
 def pyviz_graphy(nodes, edges):
