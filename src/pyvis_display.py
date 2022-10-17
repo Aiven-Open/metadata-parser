@@ -28,6 +28,7 @@ colors["tag"] = "#0000cc"
 colors["backup"] = "cccccc"
 colors["consumer_group"] = "#0000cc"
 colors["partition"] = "#0000cc"
+colors["service_nodes"] = "#0000cc"
 
 
 sizes = {}
@@ -56,6 +57,7 @@ sizes["tag"] = 10
 sizes["backup"] = 10
 sizes["consumer_group"] = 10
 sizes["partition"] = 10
+sizes["service_node"] = 10
 
 
 images = {}
@@ -85,6 +87,7 @@ images["tag"] = "img/tag.png"
 images["backup"] = "img/database.png"
 images["consumer_group"] = "img/user.png"
 images["partition"] = "img/layout.png"
+images["service_node"] = "img/servers.png"
 
 
 def pyviz_graphy(nodes, edges):
@@ -160,7 +163,7 @@ def pyviz_graphy(nodes, edges):
 
     print("Writing NX file")
     try:
-        nt = Network(height="1200px", width="1600px", font_color="#000000")
+        nt = Network(height="1000px", width="1000px", font_color="#000000")
         nt.from_nx(g)
         # nt.show_buttons()
         nt.show_buttons()
@@ -169,35 +172,4 @@ def pyviz_graphy(nodes, edges):
     except Exception as err:
         print(f"Error writing NX file: {err.__class__.__name__} {err}")
 
-    """
-    not_services =  (n for n in g if g.nodes[n]['type'] != 'service')
-    services =  (n for n in g if g.nodes[n]['type'] == 'service')
-    
-    g_connected = node_connected_component(g.to_undirected().subgraph(not_services),'pg~demo-pg~schema~public~table~pasta')
-    #g_connected = (n for n in g_connected if g_connected[n]['type'] in ('service',''))
-    g_subgraph = g.subgraph(g_connected)
-    nt = Network(height='1200px', width='800px', font_color="#000000")
-    nt.from_nx(g_subgraph)
-    nt.show('filtered.html')
-    content = '<table><tr><td ><div id = "mynetwork"></div></td><td ><div><table style="order-spacing: 0px; border-collapse: collapse; width: 100%; max-width: 100%; margin-bottom: 15px; background-color: transparent; text-align: left;">' \
-              '<tr><th style="font-weight: bold; border: 1px solid #cccccc; padding: 8px;"><b>Img</b></th><th style="font-weight: bold; border: 1px solid #cccccc; padding: 8px;"><b>Node type</b></th><th style="font-weight: bold; border: 1px solid #cccccc; padding: 8px;"><b>Node Label</b></th><th style="font-weight: bold; border: 1px solid #cccccc; padding: 8px;"><b>Service type</b></td><th style="font-weight: bold; border: 1px solid #cccccc; padding: 8px;"><b>Service Name</b></th></tr>'
-    for node in g_subgraph.nodes:
-        
-        content = content + '<tr><td style="border: 1px solid #cccccc; padding: 8px;"><img src="'+g_subgraph.nodes[node]["image"]+'" width="20px" ></img></td><td style="border: 1px solid #cccccc; padding: 8px;">'+g_subgraph.nodes[node]["type"]+'</td><td style="border: 1px solid #cccccc; padding: 8px;">'+g_subgraph.nodes[node]["label"]+'</td><td style="border: 1px solid #cccccc; padding: 8px;">'+g_subgraph.nodes[node]["service_type"]+'</td><td style="border: 1px solid #cccccc; padding: 8px;">'+g_subgraph.nodes[node]["id"].split('~')[1]+'</td></tr>'
-    content = content + '</table></div></table>'
-    file = open("filtered.html", "r")
-    
-        
-    replacement = ""
-    # using the for loop
-    for line in file:
-        line = line.strip()
-        changes = line.replace('<div id = "mynetwork"></div>', content)
-        replacement = replacement + changes + "\n"
-
-    file.close()
-    # opening the file in write mode
-    fout = open("filtered.html", "w")
-    fout.write(replacement)
-    fout.close()
-    """
+    ## All images are taken from https://www.flaticon.com/

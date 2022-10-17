@@ -100,5 +100,8 @@ Contact
 Bug reports and patches are very welcome, please post them as GitHub issues and pull requests at https://github.com/aiven/metadata-parser . 
 To report any possible vulnerabilities or other serious issues please see our [security](SECURITY.md) policy.
 
+All images under the `src` folder and shown in `nx.html` file are taken from https://www.flaticon.com/
+All images under the `src/services` folder are a property of Aiven
+
 
 Apache, Apache Kafka, Kafka, Apache Flink, Flink, Apache Cassandra, and Cassandra are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. ClickHouse is a registered trademark of ClickHouse, Inc. https://clickhouse.com. M3, M3 Aggregator, M3 Coordinator, OpenSearch, PostgreSQL, MySQL, InfluxDB, Grafana, Terraform, and Kubernetes are trademarks and property of their respective owners. *Redis is a trademark of Redis Ltd. and the Redis box logo is a mark of Redis Ltd. Any rights therein are reserved to Redis Ltd. Any use by Aiven is for referential purposes only and does not indicate any sponsorship, endorsement or affiliation between Redis and Aiven.  All product and service names used in this website are for identification purposes only and do not imply endorsement.
