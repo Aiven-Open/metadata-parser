@@ -110,7 +110,7 @@ def explore(self, service_type, service_name, project):
             f"Don't know how to explore RUNNING {service_type}"
             f"service {service_name}"
         )
-        print("AAAAA" + traceback.format_exc())
+
         return nodes, edges
 
     try:
@@ -136,6 +136,15 @@ def explore(self, service_type, service_name, project):
                 "label": service_name,
             }
         )
+
+        # Getting components
+
+        (new_nodes, new_edges) = explore_components(
+            service_name, service_type, service["components"]
+        )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
+
         # Getting integrations
 
         (new_nodes, new_edges) = integration.explore_integrations(
@@ -347,4 +356,45 @@ def explore_ext_endpoints(self, project):
             }
         )
 
+    return nodes, edges
+
+
+def explore_components(service_name, service_type, components):
+    nodes = []
+    edges = []
+
+    global SERVICE_MAP
+
+    for component in components:
+        nodes.append(
+            {
+                "id": service_type
+                + "~"
+                + service_name
+                + "~node~"
+                + component.get("host"),
+                "host": component.get("host"),
+                "port": component.get("port"),
+                "privatelink_connection_id": component.get(
+                    "privatelink_connection_id"
+                ),
+                "route": component.get("route"),
+                "usage": component.get("usage"),
+                "type": "service_node",
+                "service_type": service_type,
+                "label": component.get("host"),
+            }
+        )
+        edges.append(
+            {
+                "from": service_type
+                + "~"
+                + service_name
+                + "~node~"
+                + component.get("host"),
+                "to": service_name,
+                "label": "partition",
+            }
+        )
+        SERVICE_MAP[component.get("host")] = service_name
     return nodes, edges
