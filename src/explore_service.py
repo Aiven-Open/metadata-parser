@@ -12,6 +12,7 @@ from src import (
     mysql,
     opensearch,
     flink,
+    sql,
 )
 import traceback
 
