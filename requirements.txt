@@ -10,3 +10,4 @@ plotly
 pymysql
 pydot
 colour
+cryptography==38.0.1
