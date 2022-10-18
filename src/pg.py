@@ -1,6 +1,7 @@
 """Parsing PostgreSQL services"""
 
 import psycopg2
+from src import sql
 
 
 def build_conn_string(avnadmin_pwd, service_conn_info):
@@ -79,6 +80,14 @@ def explore_pg(self, service, service_name, project, service_map):
         edges = edges + new_edges
 
         new_nodes, new_edges = explore_pg_grants(cur, service_name)
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
+
+        new_nodes, new_edges = explore_pg_views(cur, service_name)
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
+
+        new_nodes, new_edges = explore_pg_columns(cur, service_name)
         nodes = nodes + new_nodes
         edges = edges + new_edges
 
@@ -176,7 +185,7 @@ def explore_pg_tables(cur, service_name):
                 + service_name
                 + "~schema~"
                 + table[0]
-                + "~table~"
+                + "~table_view~"
                 + table[1],
                 "service_type": "pg",
                 "type": "table",
@@ -190,7 +199,7 @@ def explore_pg_tables(cur, service_name):
                 + service_name
                 + "~schema~"
                 + table[0]
-                + "~table~"
+                + "~table_view~"
                 + table[1],
                 "label": "table",
             }
@@ -250,7 +259,7 @@ def explore_pg_grants(cur, service_name):
                 + service_name
                 + "~schema~"
                 + role_table_grant[1]
-                + "~table~"
+                + "~table_view~"
                 + role_table_grant[2],
                 "label": "grant",
                 "privilege_type": role_table_grant[3],
@@ -282,7 +291,7 @@ def explore_pg_columns(cur, service_name):
                 + service_name
                 + "~schema~"
                 + column[1]
-                + "~table~"
+                + "~table_view~"
                 + column[2]
                 + "~column~"
                 + column[3],
@@ -299,7 +308,7 @@ def explore_pg_columns(cur, service_name):
                 + service_name
                 + "~schema~"
                 + column[1]
-                + "~table~"
+                + "~table_view~"
                 + column[2]
                 + "~column~"
                 + column[3],
@@ -307,9 +316,74 @@ def explore_pg_columns(cur, service_name):
                 + service_name
                 + "~schema~"
                 + column[1]
-                + "~table~"
+                + "~table_view~"
                 + column[2],
                 "label": "column",
             }
         )
     return nodes, edges
+
+
+def explore_pg_views(cur, service_name):
+
+    nodes = []
+    edges = []
+
+    cur.execute(
+        """
+            select table_catalog, table_schema, table_name, view_definition,
+            check_option, is_updatable, is_insertable_into, 
+            is_trigger_updatable, is_trigger_deletable, is_trigger_insertable_into 
+            from information_schema.views
+            where table_schema not in ('information_schema', 'pg_catalog');
+            """
+    )
+
+    views = cur.fetchall()
+    for view in views:
+        nodes.append(
+            {
+                "id": "pg~"
+                + service_name
+                + "~schema~"
+                + view[1]
+                + "~table_view~"
+                + view[2],
+                "service_type": "pg",
+                "type": "view",
+                "view_definition": view[3],
+                "check_option": view[4],
+                "is_updatable": view[5],
+                "is_insertable_into": view[6],
+                "is_trigger_updatable": view[7],
+                "is_trigger_deletable": view[8],
+                "is_trigger_insertable_into": view[9],
+                "label": view[2],
+            }
+        )
+        edges.append(
+            {
+                "from": "pg~" + service_name + "~schema~" + view[1],
+                "to": "pg~"
+                + service_name
+                + "~schema~"
+                + view[1]
+                + "~table_view~"
+                + view[2],
+                "label": "view",
+            }
+        )
+
+        new_nodes, new_edges = sql.explore_sql(
+            view[3], service_name, view[1], view[2], "pg"
+        )
+        nodes = nodes + new_nodes
+        edges = edges + new_edges
+    return nodes, edges
+
+    # new_nodes, new_edges = sql.explore_sql(
+    #     "create view testview as select a, b from test",
+    #     "cavallo",
+    #     "serpente",
+    #     "kafka",
+    # )

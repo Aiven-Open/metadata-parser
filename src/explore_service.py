@@ -13,7 +13,6 @@ from src import (
     opensearch,
     flink,
 )
-import traceback
 
 
 SERVICE_MAP = {}
