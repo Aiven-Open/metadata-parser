@@ -350,7 +350,7 @@ def explore_pg_views(cur, service_name):
                 + "~table_view~"
                 + view[2],
                 "service_type": "pg",
-                "type": "table column",
+                "type": "view",
                 "view_definition": view[3],
                 "check_option": view[4],
                 "is_updatable": view[5],

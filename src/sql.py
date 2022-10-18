@@ -1,13 +1,14 @@
 """Parsing SQL"""
 
 from sqllineage.runner import LineageRunner
+from sqllineage.core.models import SubQuery
 
 
 def explore_sql(sql_statement, service_name, schema, target, service_type):
     """Parsing SQL"""
     nodes = []
     edges = []
-    print(sql_statement)
+
     if not sql_statement.upper().startswith("INSERT"):
         sql_statement = "INSERT INTO " + target + " AS " + sql_statement
     runner = LineageRunner(
@@ -20,14 +21,18 @@ def explore_sql(sql_statement, service_name, schema, target, service_type):
         },
     )
 
-    for line in runner.get_column_lineage():
+    for line in runner.get_column_lineage(exclude_subquery=False):
         prev_col_id = None
-        print(str(line))
+
         for col in reversed(line):
-            print(str(col))
-            table_name = col.parent.raw_name
+            is_subquery = False
+            if isinstance(col.parent, SubQuery):
+                table_name = col.parent.alias
+                is_subquery = True
+            else:
+                table_name = col.parent.raw_name
             column_name = col.raw_name
-            print(column_name)
+
             if table_name is None:
                 # This is the case where is a reference to the end column
                 new_col_id = (
@@ -43,14 +48,6 @@ def explore_sql(sql_statement, service_name, schema, target, service_type):
                     + "~"
                     + column_name
                 )
-                # nodes.append(
-                #     {
-                #         "id": new_col_id,
-                #         "service_type": service_type,
-                #         "type": "sql_column_reference",
-                #         "label": column_name,
-                #     }
-                # )
             else:
                 new_col_id = (
                     service_type
@@ -63,14 +60,47 @@ def explore_sql(sql_statement, service_name, schema, target, service_type):
                     + "~column~"
                     + column_name
                 )
-                # nodes.append(
-                #     {
-                #         "id": new_col_id,
-                #         "service_type": service_type,
-                #         "type": "sql_column_reference",
-                #         "label": column_name,
-                #     }
-                # )
+            if is_subquery:
+                nodes.append(
+                    {
+                        "id": new_col_id,
+                        "service_type": service_type,
+                        "type": "reference",
+                        "label": column_name,
+                    }
+                )
+                nodes.append(
+                    {
+                        "id": new_col_id.split("~column~")[0],
+                        "service_type": service_type,
+                        "type": "sql_reference",
+                        "label": new_col_id.split("~column~")[0].split(
+                            "~table_view~"
+                        )[1],
+                    }
+                )
+                edges.append(
+                    {
+                        "from": new_col_id,
+                        "to": new_col_id.split("~column~")[0],
+                        "type": "sql_reference",
+                    }
+                )
+                edges.append(
+                    {
+                        "from": service_type
+                        + "~"
+                        + service_name
+                        + "~schema~"
+                        + schema
+                        + "~table_view~"
+                        + target,
+                        "to": new_col_id.split("~column~")[0],
+                        "type": "sql_reference",
+                        "label": target,
+                    }
+                )
+
             if prev_col_id is not None:
                 edges.append(
                     {
@@ -79,5 +109,6 @@ def explore_sql(sql_statement, service_name, schema, target, service_type):
                         "type": "sql_reference",
                     }
                 )
+
             prev_col_id = new_col_id
     return nodes, edges

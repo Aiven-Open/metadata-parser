@@ -10,6 +10,7 @@ colors["topic-acl"] = "#003300"
 colors["database"] = "#0000ff"
 colors["schema"] = "#000077"
 colors["table"] = "#000033"
+colors["view"] = "#000033"
 colors["table column"] = "#000011"
 colors["user"] = "#0000AA"
 colors["flink table"] = "#AA0000"
@@ -29,6 +30,9 @@ colors["backup"] = "cccccc"
 colors["consumer_group"] = "#0000cc"
 colors["partition"] = "#0000cc"
 colors["service_nodes"] = "#0000cc"
+colors["service_nodes"] = "#0000cc"
+colors["reference"] = "#0000cc"
+colors["sql_reference"] = "#0000cc"
 
 
 sizes = {}
@@ -39,6 +43,7 @@ sizes["topic-acl"] = 15
 sizes["database"] = 20
 sizes["schema"] = 15
 sizes["table"] = 15
+sizes["view"] = 15
 sizes["user"] = 15
 sizes["flink table"] = 15
 sizes["flink job"] = 25
@@ -58,6 +63,8 @@ sizes["backup"] = 10
 sizes["consumer_group"] = 10
 sizes["partition"] = 10
 sizes["service_node"] = 10
+sizes["reference"] = 10
+sizes["sql_reference"] = 10
 
 
 images = {}
@@ -68,6 +75,7 @@ images["acl"] = "img/document.png"
 images["database"] = "img/database.png"
 images["schema"] = "img/document.png"
 images["table"] = "img/table.png"
+images["view"] = "img/table.png"
 images["user"] = "img/user.png"
 images["flink table"] = "img/table.png"
 images["flink job"] = "img/engineering.png"
@@ -88,6 +96,8 @@ images["backup"] = "img/database.png"
 images["consumer_group"] = "img/user.png"
 images["partition"] = "img/layout.png"
 images["service_node"] = "img/servers.png"
+images["reference"] = "img/reference.png"
+images["sql_reference"] = "img/sql_reference.png"
 
 
 def pyviz_graphy(nodes, edges):
