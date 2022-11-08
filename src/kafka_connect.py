@@ -140,7 +140,7 @@ def explore_debezium_pg_source(self, connector, service, service_map):
                     + target_host
                     + "~schema~"
                     + schema
-                    + "~table~"
+                    + "~table_view~"
                     + table_name,
                     "service_type": "ext-pg-table",
                     "type": "external-postgresql-table",
@@ -155,7 +155,7 @@ def explore_debezium_pg_source(self, connector, service, service_map):
                     + target_host
                     + "~schema~"
                     + schema
-                    + "~table~"
+                    + "~table_view~"
                     + table_name,
                 }
             )
@@ -178,7 +178,7 @@ def explore_debezium_pg_source(self, connector, service, service_map):
                     + target_host
                     + "~schema~"
                     + schema
-                    + "~table~"
+                    + "~table_view~"
                     + table_name,
                 }
             )
@@ -229,7 +229,7 @@ def explore_debezium_pg_source(self, connector, service, service_map):
                     + target_service
                     + "~schema~"
                     + schema
-                    + "~table~"
+                    + "~table_view~"
                     + table_name,
                     "label": "table",
                 }
