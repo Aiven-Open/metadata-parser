@@ -10,5 +10,5 @@ plotly
 pymysql
 pydot
 colour
-cryptography==38.0.3
+cryptography
 sqllineage
