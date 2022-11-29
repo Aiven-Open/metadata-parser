@@ -82,7 +82,7 @@ The code is a bare minimum product, doesn't cover all services and options and i
 Possible issues and solutions
 ============
 
-- If you run `python app.py` and see an error saying `No such file or directory: 'neato'`, you will have to install `graphviz` on your machine (the package version from pip doesn't seem to work) - fi.d out how to install it [here](https://graphviz.org/download/).
+- If you run `python app.py` and see an error saying `No such file or directory: 'neato'`, you will have to install `graphviz` on your machine (the package version from pip doesn't seem to work) - find out how to install it [here](https://graphviz.org/download/).
 
 Contributing
 ============
