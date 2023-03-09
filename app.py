@@ -55,11 +55,13 @@ def network_graph(node_to_filter, types_to_filter):
     LIST_OF_NODES.append({"label": "All", "value": "All"})
     for node in graph.nodes():
         graph.nodes[node]["pos"] = pos[node]
+
         title = (
             graph.nodes[node].get("title")
             if graph.nodes[node].get("title")
-            else '{"type":"unknown","id":"dunno","label":"dunno"}'
+            else '"{"type":"unknown","id":"dunno","label":"dunno"}"'
         )
+
         # node_det = json.loads('{"id":"here"}')
         node_det = json.loads(
             title.replace("<br>", "")
@@ -68,7 +70,11 @@ def network_graph(node_to_filter, types_to_filter):
             .replace("False", "false")
             .replace("None", "[]")[1:-1]
         )
-        LIST_OF_TYPES.append(graph.nodes[node].get("type"))
+        LIST_OF_TYPES.append(
+            graph.nodes[node].get("type")
+            if graph.nodes[node].get("type")
+            else "dunno"
+        )
         if node_det.get("type") != "service":
             LIST_OF_NODES.append(
                 {
@@ -122,7 +128,7 @@ def network_graph(node_to_filter, types_to_filter):
         title = (
             graph.nodes[node].get("title")
             if graph.nodes[node].get("title")
-            else '{"type":"unknown","id":"dunno","label":"dunno"}'
+            else '"{"type":"unknown","id":"dunno","label":"dunno"}"'
         )
         hovertext = title
         text = json.loads(
@@ -170,7 +176,9 @@ def network_graph(node_to_filter, types_to_filter):
         hovertext = {
             "from": edge_json["from"],
             "to": edge_json["to"],
-            "type": edge_json["label"],
+            "type": edge_json.get("label")
+            if edge_json.get("label")
+            else "nolabel",
         }
         hovertext = graph.edges[edge]["title"]
         middle_hover_trace["x"] += tuple([(x_0 + x_1) / 2])
