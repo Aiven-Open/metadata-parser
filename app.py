@@ -2,8 +2,8 @@
 import json
 from textwrap import dedent as d
 import dash
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import networkx as nx
 import plotly.graph_objs as go
 
@@ -47,35 +47,36 @@ def network_graph(node_to_filter, types_to_filter):
             n for n in graph if graph.nodes[n].get("type") in types_to_filter
         )
         graph = graph.subgraph(sel_nodes)
-    pos = nx.nx_pydot.pydot_layout(graph)
+    pos = nx.spring_layout(graph)
     # pos = nx.layout.spring_layout(G)
 
     LIST_OF_NODES = []
     LIST_OF_TYPES = []
     LIST_OF_NODES.append({"label": "All", "value": "All"})
     for node in graph.nodes():
-
         graph.nodes[node]["pos"] = pos[node]
         title = (
             graph.nodes[node].get("title")
             if graph.nodes[node].get("title")
             else '{"type":"unknown","id":"dunno","label":"dunno"}'
         )
+        # node_det = json.loads('{"id":"here"}')
         node_det = json.loads(
             title.replace("<br>", "")
             .replace("'", '"')
             .replace("True", "true")
             .replace("False", "false")
-            .replace("None", "[]")
+            .replace("None", "[]")[1:-1]
         )
         LIST_OF_TYPES.append(graph.nodes[node].get("type"))
         if node_det.get("type") != "service":
             LIST_OF_NODES.append(
                 {
                     "label": node_det.get("id").replace("~", " -> "),
-                    "value": node_det.get("id"),
+                    "value": '"' + node_det.get("id") + '"',
                 }
             )
+            # print(node_det.get("id"))
 
     LIST_OF_TYPES = list(sorted(set(LIST_OF_TYPES)))
 
@@ -129,7 +130,7 @@ def network_graph(node_to_filter, types_to_filter):
             .replace("'", '"')
             .replace("True", "true")
             .replace("False", "false")
-            .replace("None", "[]")
+            .replace("None", "[]")[1:-1]
         )["label"]
         node_trace["x"] += tuple([x_pos])
         node_trace["y"] += tuple([y_pos])
@@ -156,13 +157,14 @@ def network_graph(node_to_filter, types_to_filter):
     for edge in graph.edges:
         x_0, y_0 = graph.nodes[edge[0]]["pos"]
         x_1, y_1 = graph.nodes[edge[1]]["pos"]
+
         edge_json = json.loads(
             graph.edges[edge]["title"]
             .replace("<br>", "")
             .replace("'", '"')
             .replace("True", "true")
             .replace("False", "false")
-            .replace("None", "[]")
+            .replace("None", "[]")[1:-1]
         )
         # print(edge_json)
         hovertext = {
@@ -409,7 +411,7 @@ def display_hover_data(hover_data):
                 .replace("'", '"')
                 .replace("True", "true")
                 .replace("False", "false")
-                .replace("None", "[]")
+                .replace("None", "[]")[1:-1]
             )
             hover_data = json.loads(hover_data)
     return json.dumps(hover_data, indent=2)

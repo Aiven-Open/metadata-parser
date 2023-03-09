@@ -13,9 +13,9 @@ colors["table"] = "#000033"
 colors["view"] = "#000033"
 colors["table column"] = "#000011"
 colors["user"] = "#0000AA"
-colors["flink table"] = "#AA0000"
+colors["flink application"] = "#AA0000"
 colors["flink job"] = "#660000"
-colors["flink table column"] = "#330000"
+colors["flink application version"] = "#330000"
 colors["external_endpoint"] = "#cc0000"
 colors["kafka-connect"] = "#dd0000"
 colors["external-postgresql"] = "#0000ff"
@@ -45,9 +45,9 @@ sizes["schema"] = 15
 sizes["table"] = 15
 sizes["view"] = 15
 sizes["user"] = 15
-sizes["flink table"] = 15
+sizes["flink application"] = 15
 sizes["flink job"] = 25
-sizes["flink table column"] = 10
+sizes["flink application version"] = 10
 sizes["table column"] = 10
 sizes["external_endpoint"] = 30
 sizes["kafka-connect"] = 25
@@ -77,9 +77,9 @@ images["schema"] = "img/document.png"
 images["table"] = "img/table.png"
 images["view"] = "img/table.png"
 images["user"] = "img/user.png"
-images["flink table"] = "img/table.png"
+images["flink application"] = "img/table.png"
 images["flink job"] = "img/engineering.png"
-images["flink table column"] = "img/layout.png"
+images["flink application version"] = "img/layout.png"
 images["table column"] = "img/layout.png"
 images["external_endpoint"] = "img/ext-monitor.png"
 images["kafka-connect"] = "img/engineering.png"
@@ -101,13 +101,11 @@ images["sql_reference"] = "img/sql_reference.png"
 
 
 def pyviz_graphy(nodes, edges):
-
     print()
     print("Calulating network graph")
     # g = Network(height='750px', width='100%')
     g = nx.DiGraph()
     for node in nodes:
-
         if isinstance(node, dict) and node["id"] is None:
             print(f"Ignoring node {node} - it has id None")
             continue
@@ -124,20 +122,23 @@ def pyviz_graphy(nodes, edges):
             colors.get(node["type"]) if colors.get(node["type"]) else "#cccccc"
         )
         g.add_node(
-            node["id"],
+            '"' + node["id"] + '"',
             color=nodecolor,
-            title=str(node)
+            title='"'
+            + str(node)
             .replace(",", ",<br>")
             .replace("{", "{<br>")
-            .replace("}", "<br>}"),
+            .replace("}", "<br>}")
+            + '"',
             size=nodesize,
-            label=node["label"],
+            label='"' + node["label"] + '"',
             shape="image",
             image=img,
             type=node["type"] if node["type"] else "NoNodeType",
             service_type=node["service_type"],
-            id=node["id"],
+            id='"' + node["id"] + '"',
         )
+
         if node["id"] == None:
             print(node)
 
@@ -147,12 +148,14 @@ def pyviz_graphy(nodes, edges):
             print(f"Ignoring edge {edge} - one or both ends is None")
             continue
         g.add_edge(
-            edge["from"],
-            edge["to"],
-            title=str(edge)
+            '"' + edge["from"] + '"',
+            '"' + edge["to"] + '"',
+            title='"'
+            + str(edge)
             .replace(",", ",<br>")
             .replace("{", "{<br>")
-            .replace("}", "<br>}"),
+            .replace("}", "<br>}")
+            + '"',
             physics=False,
         )
         if edge["from"] == None or edge["to"] == None:
@@ -177,6 +180,7 @@ def pyviz_graphy(nodes, edges):
         nt.from_nx(g)
         # nt.show_buttons()
         nt.show_buttons()
+        nt.set_edge_smooth("continuous")
         nt.show("nx.html")
         # print (g.nodes)
     except Exception as err:
