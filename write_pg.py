@@ -42,7 +42,7 @@ for node in G.nodes():
         .replace("'", '"')
         .replace("True", "true")
         .replace("False", "false")
-        .replace("None", "[]")
+        .replace("None", "[]")[1:-1]
     )
     print(json_rep["id"])
     cur.execute(
@@ -59,7 +59,7 @@ for edge in G.edges():
         .replace("'", '"')
         .replace("True", "true")
         .replace("False", "false")
-        .replace("None", "[]")
+        .replace("None", "[]")[1:-1]
     )
     print(json.dumps(json_rep))
     cur.execute(

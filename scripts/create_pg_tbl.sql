@@ -1,10 +1,10 @@
-create table pasta (pasta_id serial, pasta_name varchar(100), cooking_minutes int, primary key(pasta_id));
-insert into pasta(pasta_name, cooking_minutes) values ('pennette',8),('fusilli',7),('spaghetti',9);
+create table dogs (dogs_id serial, dogs_name varchar(100), age int, primary key(dogs_id));
+insert into dogs(dogs_name, age) values ('Fuffi',8),('Roger',7),('Sandro',9);
 
-create table pasta_eater(pasta_id int, eater_name varchar(100), constraint pasta_exitst_fk foreign key(pasta_id) references pasta(pasta_id));
-insert into pasta_eater values(1, 'Francesco'), (2, 'Ewelina'), (3, 'Lorna');
+create table dog_friend(dog_id int, friend_name varchar(100), constraint dog_exitst_fk foreign key(dog_id) references dogs(dogs_id));
+insert into dog_friend values(1, 'Francesco'), (2, 'Ewelina'), (3, 'Lorna');
 
 
-create view vw_pasta_view AS
-select pasta.pasta_id, pasta_name, cooking_minutes, eater_name
-from pasta join pasta_eater on pasta.pasta_id = pasta_eater.pasta_id;
+create view vw_dog_view AS
+select dogs.dogs_id, dogs_name, age, friend_name
+from dogs join dog_friend on dogs.dogs_id = dog_friend.dog_id;
