@@ -8,20 +8,97 @@ def explore_flink(self, service, service_name, project, service_map):
     host = service["service_uri_params"]["host"]
     port = 443
 
-    # Parsing Tables
-    new_nodes, new_edges = explore_flink_tables(self, service_name, project)
+    # Parsing Applications
+    new_nodes, new_edges = explore_flink_applications(
+        self, service_name, project
+    )
     nodes = nodes + new_nodes
     edges = edges + new_edges
 
-    # Parsing Jobs
-    new_nodes, new_edges = explore_flink_jobs(self, service_name, project)
-    nodes = nodes + new_nodes
-    edges = edges + new_edges
     return host, port, nodes, edges, service_map
 
 
+def explore_flink_applications(self, service_name, project):
+    """Explores Flink applications"""
+    nodes = []
+    edges = []
+
+    applications = self.flink_list_applications(
+        service=service_name, project=project
+    )
+    for application in applications["applications"]:
+        # Creating a node beween table and service
+        nodes.append(
+            {
+                "id": "flink~"
+                + service_name
+                + "~application~"
+                + application["name"],
+                "service_type": "flink",
+                "type": "flink application",
+                "application_id": application["id"],
+                "label": application["name"],
+            }
+        )
+
+        edges.append(
+            {
+                "from": "flink~"
+                + service_name
+                + "~application~"
+                + application["name"],
+                "to": service_name,
+                "label": "flink application",
+            }
+        )
+
+        application_details = self.flink_get_application(
+            service=service_name,
+            project=project,
+            application_id=application["id"],
+        )
+
+        for application_version in application_details["application_versions"]:
+            nodes.append(
+                {
+                    "id": "flink~"
+                    + service_name
+                    + "~application~"
+                    + application["name"]
+                    + "~version~"
+                    + str(application_version["version"]),
+                    "service_type": "flink",
+                    "type": "flink application version",
+                    "application_version_id": application_version["id"],
+                    "label": str(application_version["version"]),
+                }
+            )
+
+            edges.append(
+                {
+                    "from": "flink~"
+                    + service_name
+                    + "~application~"
+                    + application["name"],
+                    "to": "flink~"
+                    + service_name
+                    + "~application~"
+                    + application["name"]
+                    + "~version~"
+                    + str(application_version["version"]),
+                    "label": "flink application version",
+                }
+            )
+
+            for source in application_version["sources"]:
+                print(source)
+                # TODO - explore application versions
+
+    return nodes, edges
+
+
 def explore_flink_tables(self, service_name, project):
-    """Explores Flink tables"""
+    """Explores Flink tables - old, not to be used"""
 
     nodes = []
     edges = []
@@ -31,7 +108,6 @@ def explore_flink_tables(self, service_name, project):
 
     # Checking each table definition in Flink
     for table in tables:
-
         # Creating a node beween table and service
         nodes.append(
             {

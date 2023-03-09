@@ -1,10 +1,10 @@
-psycopg2
+psycopg2-binary
 requests
 simplejson
 aiven.client
 configparser
-pyvis
-networkx
+pyvis==0.3.1
+networkx=2.8.8
 dash
 plotly
 pymysql

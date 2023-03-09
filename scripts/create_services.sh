@@ -230,54 +230,59 @@ KAFKA_FLINK_SI=$(avn --auth-token $TOKEN service integration-list --format '{sou
 
 avn --auth-token $TOKEN service wait demo-flink
 
-mkdir tmp
-tee tmp/ssh_in.json << EOF
-{
-    "integration_id": "$KAFKA_FLINK_SI",
-    "kafka": {
-        "scan_startup_mode": "earliest-offset",
-        "topic": "ssh_logins",
-        "value_fields_include": "ALL",
-        "value_format": "json"
-    },
-    "schema_sql": "ip VARCHAR, \`time\` BIGINT, status VARCHAR, time_ltz AS TO_TIMESTAMP_LTZ(\`time\`, 3), WATERMARK FOR time_ltz AS time_ltz - INTERVAL '10' seconds",
-    "name": "ssh_in"
-}
-EOF
+avn --auth-token $TOKEN service flink create-application demo-flink  \
+    --project $PROJECT_NAME                                     \
+  "{\"name\":\"Alert_Pipeline\"}"
 
-avn --auth-token $TOKEN service flink table create demo-flink @tmp/ssh_in.json
+FLINK_APP_ID=$(avn --auth-token $TOKEN service flink list-applications demo-flink       \
+                   --project $PROJECT_NAME                                     \
+                    | jq -r '.applications[] | select(.name == "Alert_Pipeline") | .id')
 
-tee tmp/ssh_alert.json << EOF
-{
-    "integration_id": "$KAFKA_FLINK_SI",
-    "kafka": {
-        "scan_startup_mode": "earliest-offset",
-        "topic": "ssh_alert_logins",
-        "value_fields_include": "ALL",
-        "value_format": "json"
-    },
-    "schema_sql": "ip VARCHAR, time_ltz TIMESTAMP(3), status VARCHAR",
-    "name": "ssh_alert"
-}
-EOF
+avn --auth-token $TOKEN service flink create-application-version demo-flink           \
+  --project $PROJECT_NAME                                     \
+  --application-id $FLINK_APP_ID                                  \
+  """{
+    \"sources\": [
+        {
+        \"create_table\":
+            \"CREATE TABLE ssh_in (ip VARCHAR, \`time\` BIGINT, status VARCHAR, time_ltz AS TO_TIMESTAMP_LTZ(\`time\`, 3), WATERMARK FOR time_ltz AS time_ltz - INTERVAL '10' seconds)\n\
+            WITH (\n\
+                'connector' = 'kafka',\n\
+                'properties.bootstrap.servers' = '',\n\
+                'scan.startup.mode' = 'earliest-offset',\n\
+                'value.fields-include' = 'ALL',\n\
+                'topic' = 'ssh_logins',\n\
+                'value.format' = 'json'\n\
+            )\",
+            \"integration_id\": \"$KAFKA_FLINK_SI\"
+        } ],
+    \"sinks\": [
+        {
+        \"create_table\":
+            \"CREATE TABLE ssh_alert (ip VARCHAR, time_ltz TIMESTAMP(3), status VARCHAR)\n\
+            WITH (\n\
+                'connector' = 'kafka',\n\
+                'properties.bootstrap.servers' = '',\n\
+                'scan.startup.mode' = 'earliest-offset',\n\
+                'topic' = 'ssh_alert_logins',\n\
+                'value.format' = 'json'\n\
+            )\",
+            \"integration_id\": \"$KAFKA_FLINK_SI\"
+        }
+        ],
+    \"statement\":
+        \"insert into ssh_alert select ip, time_ltz, status from ssh_in where status = 'ko'\"
+    }"""
 
-avn --auth-token $TOKEN service flink table create demo-flink @tmp/ssh_alert.json
+FLINK_APP_VERSION_ID=$(avn --auth-token $TOKEN service flink get-application demo-flink \
+    --project $PROJECT_NAME                                     \
+    --application-id $FLINK_APP_ID                                  \
+    | jq -r '.application_versions[] | select(.version == 1) | .id')
 
-TABLE_IN_ID=$(avn --auth-token $TOKEN service flink table list demo-flink | grep ssh_in | awk -F ' ' '{print $2}')
-TABLE_FILTER_OUT_ID=$(avn --auth-token $TOKEN service flink table list demo-flink | grep ssh_alert | awk -F ' ' '{print $2}')
-
-avn --auth-token $TOKEN service flink job create demo-flink my_first_agg \
-    --table-ids $TABLE_IN_ID $TABLE_FILTER_OUT_ID \
-    --statement '''
-        insert into ssh_alert
-            select
-                ip,
-                time_ltz,
-                status
-            from
-                ssh_in
-            where status = '\''ko'\''
-            '''
+avn --auth-token $TOKEN service flink create-application-deployment demo-flink      \
+  --project $PROJECT_NAME                                   \
+  --application-id $FLINK_APP_ID                                \
+  "{\"parallelism\": 1,\"restart_enabled\": true,  \"version_id\": \"$FLINK_APP_VERSION_ID\"}"
 
 avn --auth-token $TOKEN service wait demo-grafana
 
