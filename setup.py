@@ -10,7 +10,7 @@ setup(
     url='https://github.com/aiven/metadata-parser',
 
     download_url='TBD',
-    keywords=['kafka', 'faker', 'producer'],
+    keywords=['aiven', 'meta-data', 'parser'],
     install_requires=[
         'psycopg2-binary',
         'requests',
