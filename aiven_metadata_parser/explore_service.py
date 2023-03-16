@@ -1,19 +1,14 @@
 """Explores a service"""
 
-from src import (
+from aiven_metadata_parser import (
     backup,
     kafka,
-    kafka_connect,
-    pg,
     tag,
     integration,
-    grafana,
-    redis,
-    mysql,
-    opensearch,
     flink,
 )
-
+from aiven_metadata_parser import pg
+from aiven_metadata_parser import opensearch, kafka_connect, mysql, grafana, redis
 
 SERVICE_MAP = {}
 EXPLORER_METHODS = {}

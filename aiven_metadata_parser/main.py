@@ -1,10 +1,10 @@
 from aiven.client import client
-from src import explore_service
-import src.pyvis_display as pyvis_display
+from aiven_metadata_parser import explore_service
+import aiven_metadata_parser.pyvis_display as pyvis_display
 import configparser
 
 # Reading conf.env configuration file
-with open("conf/conf.env", "r") as f:
+with open("aiven_metadata_parser/conf/conf.env", "r") as f:
     config_string = "[DEFAULT]\n" + f.read()
 config = configparser.ConfigParser()
 config.read_string(config_string)

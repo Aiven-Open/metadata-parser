@@ -1,7 +1,7 @@
 """Parsing Apache Kafka® services"""
 
 import re
-from src import kafka_connect
+from aiven_metadata_parser import kafka_connect
 
 
 def explore_kafka(self, service, service_name, project, service_map):

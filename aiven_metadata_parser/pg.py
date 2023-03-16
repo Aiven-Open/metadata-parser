@@ -1,7 +1,7 @@
 """Parsing PostgreSQL services"""
 
 import psycopg2
-from src import sql
+from aiven_metadata_parser import sql
 
 
 def build_conn_string(avnadmin_pwd, service_conn_info):
