@@ -4,7 +4,7 @@ simplejson
 aiven.client
 configparser
 pyvis==0.3.1
-networkx=2.8.8
+networkx==2.8.8
 dash
 plotly
 pymysql
