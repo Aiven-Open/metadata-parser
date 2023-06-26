@@ -12,3 +12,4 @@ kcat.config
 tmp
 .vscode
 *.log
+conf/*

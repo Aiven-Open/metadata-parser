@@ -105,7 +105,7 @@ avn --auth-token $TOKEN service schema create demo-kafka \
 avn --auth-token $TOKEN service wait demo-pg
 
 avn --auth-token $TOKEN service cli demo-pg << EOF
-\i scripts/create_pg_tbl.sql
+\i aiven_metadata_parser/scripts/create_pg_tbl.sql
 EOF
 
 PG_PWD=$(avn --auth-token $TOKEN service user-get demo-pg --format '{password}' --username avnadmin)
@@ -222,7 +222,7 @@ avn --auth-token $TOKEN service wait demo-mysql
 MYSQL_HOST=$(avn --auth-token $TOKEN service get demo-mysql --json | jq -r '.service_uri_params.host')
 MYSQL_PORT=$(avn --auth-token $TOKEN service get demo-mysql --json | jq -r '.service_uri_params.port')
 MYSQL_PWD=$(avn --auth-token $TOKEN service get demo-mysql --json | jq -r '.service_uri_params.password')
-mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < scripts/create_mysql_tbl.sql
+mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < aiven_metadata_parser/scripts/create_mysql_tbl.sql
 
 
 KAFKA_FLINK_SI=$(avn --auth-token $TOKEN service integration-list --format '{source_service} {service_integration_id}' demo-flink | grep demo-kafka | awk -F ' ' '{print $2}')
@@ -294,11 +294,11 @@ curl --location --request GET "$GRAFANA_URL/api/datasources" \
 
 # Add a grafana dashboard
 avn --auth-token $TOKEN service wait demo-grafana
-python src/add_grafana_dashboard.py $PROJECT_NAME
+python aiven_metadata_parser/src/add_grafana_dashboard.py $PROJECT_NAME
 
 # Add redis user and ACL
 avn --auth-token $TOKEN service wait demo-redis
 avn --auth-token $TOKEN service user-create --project $PROJECT_NAME --username test demo-redis
 avn --auth-token $TOKEN service user-set-access-control --project $PROJECT_NAME --username test --redis-acl-keys '~app2:*' demo-redis
 
-mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < scripts/create_mysql_usr.sql
+mysql -u avnadmin -P $MYSQL_PORT -h $MYSQL_HOST -D defaultdb -p$MYSQL_PWD < aiven_metadata_parser/scripts/create_mysql_usr.sql

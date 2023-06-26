@@ -1,6 +1,6 @@
 from aiven.client import client
 from aiven_metadata_parser import explore_service
-import aiven_metadata_parser.pyvis_display as pyvis_display
+from aiven_metadata_parser import pyvis_display as pyvis_display
 import configparser
 
 
@@ -26,9 +26,24 @@ def main():
     # to parse first services which can be either source or sink of other services (e.g. Kafka connect might use a PG
     # table as a source)
 
-    services_order = {"opensearch": 1, "elasticsearch": 1, "pg": 1, "redis": 1, "mysql": 1, "clickhouse": 1,
-                      "cassandra": 1, "m3db": 1, "m3aggregator": 1, "m3coordinator": 1, "influxdb": 1, "kafka": 2,
-                      "kafka_connect": 3, "kafka_mirrormaker": 3, "flink": 3, "grafana": 3}
+    services_order = {
+        "opensearch": 1,
+        "elasticsearch": 1,
+        "pg": 1,
+        "redis": 1,
+        "mysql": 1,
+        "clickhouse": 1,
+        "cassandra": 1,
+        "m3db": 1,
+        "m3aggregator": 1,
+        "m3coordinator": 1,
+        "influxdb": 1,
+        "kafka": 2,
+        "kafka_connect": 3,
+        "kafka_mirrormaker": 3,
+        "flink": 3,
+        "grafana": 3,
+    }
 
     # Listing the services
     services = myclient.get_services(project=config["DEFAULT"]["PROJECT"])
