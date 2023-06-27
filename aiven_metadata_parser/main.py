@@ -1,6 +1,6 @@
 from aiven.client import client
-from aiven_metadata_parser import explore_service
-from aiven_metadata_parser import pyvis_display as pyvis_display
+import explore_service
+import pyvis_display as pyvis_display
 import configparser
 
 
