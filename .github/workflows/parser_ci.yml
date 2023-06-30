@@ -8,6 +8,9 @@ on:
     branches:
     - main
 
+permissions:
+  contents: read
+  
 env:
   CONFIG_FILE_PATH: ./conf/conf.env
   BASE_URL: https://api.aiven.io
