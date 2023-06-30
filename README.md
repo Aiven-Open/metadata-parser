@@ -24,7 +24,7 @@ The `create_services.sh` uses:
 Before starting it, please install the required dependences, login with the [Aiven CLI](https://github.com/aiven/aiven-client) and execute:
 
 ```bash
-./scripts/create_services.sh <PROJECT_NAME>
+./aiven_metadata_parser/scripts/create_services.sh <PROJECT_NAME>
 ```
 
 Where `<PROJECT_NAME>` is the name of your Aiven project.
@@ -32,7 +32,7 @@ Where `<PROJECT_NAME>` is the name of your Aiven project.
 To delete the services you can call:
 
 ```bash
-./scripts/delete_services.sh <PROJECT_NAME>
+./aiven_metadata_parser/scripts/delete_services.sh <PROJECT_NAME>
 ```
 
 If `<PROJECT_NAME>` is not passed, the default project will be used.
@@ -46,13 +46,13 @@ You need to be on Python 3.7, install the required libraries with:
 pip install -r requirements.txt
 ```
 
-Copy the `conf.env.sample` file to `conf.env` in the `conf` folder and edit the token parameter and the project name from which you want to extract parameters.
+In the `aiven_metadata_parser/conf` folder, copy the `conf.env.sample` file to `conf.env` and edit the token parameter and the project name from which you want to extract parameters.
 If you don't have a project with services already running you can create a sample set of services with the `create_services.sh` file, which requires the `aiven-client` to be installed and the user to be logged in.
 
 Once `conf.env` is set, you can start the metadata extraction with: 
 
 ```bash
-python main.py
+python aiven_metadata_parser/main.py
 ```
 
 This will generate:
@@ -65,7 +65,7 @@ This will generate:
 Furthermore if, after executing the `main.py` you also execute the following:
 
 ```bash
-python app.py
+python aiven_metadata_parser/app.py
 ```
 
 The `app.py` reads the `graph_data.gml` file generated at step 1 and creates a Reactive Web Applications with [Plotly](https://plot.ly/python/) and [Dash](https://plot.ly/dash/) (code taken from [here](https://towardsdatascience.com/python-interactive-network-visualization-using-networkx-plotly-and-dash-e44749161ed7)).
@@ -82,7 +82,7 @@ The code is a bare minimum product, doesn't cover all services and options and i
 Possible issues and solutions
 ============
 
-- If you run `python app.py` and see an error saying `No such file or directory: 'neato'`, you will have to install `graphviz` on your machine (the package version from pip doesn't seem to work) - find out how to install it [here](https://graphviz.org/download/).
+- If you run `python aiven_metadata_parser/app.py` and see an error saying `No such file or directory: 'neato'`, you will have to install `graphviz` on your machine (the package version from pip doesn't seem to work) - find out how to install it [here](https://graphviz.org/download/).
 
 Contributing
 ============

@@ -30,7 +30,7 @@ if cur.fetchone()[0]:
     cur.execute("TRUNCATE TABLE metadata_parser_nodes cascade;")
     conn.commit()
 else:
-    cur.execute(open("src/pg_store_tbl.sql", "r").read())
+    cur.execute(open("pg_store_tbl.sql", "r").read())
 
 G = read_gml("graph_data.gml")
 

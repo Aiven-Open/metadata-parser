@@ -1,5 +1,5 @@
 PROJECT_NAME=$1
-. conf/conf.env
+. aiven_metadata_parser/conf/conf.env
 
 
 avn --auth-token $TOKEN project switch $PROJECT_NAME

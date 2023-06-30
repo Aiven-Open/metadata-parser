@@ -1,6 +1,6 @@
 file.*
 *test*
-conf/conf.env
+aiven_metadata_parser/conf/conf.env
 __pycache__
 certs/*
 output.*
@@ -12,3 +12,4 @@ kcat.config
 tmp
 .vscode
 *.log
+conf/*
