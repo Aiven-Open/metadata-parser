@@ -12,3 +12,4 @@ pydot
 colour
 cryptography
 sqllineage
+numpy
