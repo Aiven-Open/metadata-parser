@@ -13,3 +13,4 @@ tmp
 .vscode
 *.log
 .ropeproject
+.ruff_cache
