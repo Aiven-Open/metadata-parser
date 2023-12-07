@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: [ "3.8", "3.9", "3.10", "3.11", "3.12" ]
 
     steps:
     - uses: actions/checkout@v3
@@ -57,16 +57,15 @@ jobs:
         file_name="nx.html"
         [[ -f ./$file_name ]] && echo "$file_name created - OK" || exit 1
 
-    - name: Run app.py server
-      run: |
-        python app.py &
-    - name: Check that the server is reachable
-      run: |
-        head=$(curl --head http://127.0.0.1:8050/ | head -n 1)
-        [[ $head = *"200 OK"* ]] && echo "$head" || exit 1
+    - name: Prepare for tests
+      run: pip install -r requirements_test.txt
+
+    - name: Run pytest
+      run: pytest .
 
   do_something_else:
     runs-on: ubuntu-latest
     needs: test_parser
     steps:
-    - run: echo "Doing something else"
+      - name: Do something else
+        run: echo "Doing something else"
