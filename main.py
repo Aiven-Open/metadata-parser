@@ -1,19 +1,15 @@
-from aiven.client import client
 from src import explore_service
 import src.pyvis_display as pyvis_display
 import configparser
+from src.client import MetadataParserClient
 
-# Reading conf.env configuration file
 with open("conf/conf.env", "r") as f:
+# Reading conf.env configuration file
     config_string = "[DEFAULT]\n" + f.read()
 config = configparser.ConfigParser()
 config.read_string(config_string)
 
-# Creating Aiven client instance
-myclient = client.AivenClient(base_url=config["DEFAULT"]["BASE_URL"])
-
-# Authenticating and storing the token
-# result = myclient.authenticate_user(email=config['DEFAULT']['USERNAME'], password=config['DEFAULT']['PASSWORD'])
+myclient = MetadataParserClient(config["DEFAULT"]["BASE_URL"], request_timeout=1)
 myclient.auth_token = config["DEFAULT"]["TOKEN"]
 
 # Creating empty nodes and edges lists

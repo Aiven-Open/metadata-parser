@@ -1,0 +1,31 @@
+{
+    "version": 1,
+    "formatters": {
+        "metadata-parser": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "metadata-parser",
+            "stream": "ext://sys.stdout"
+        }
+    },
+    "loggers": {
+        "MetadataParserClient": {
+            "level": "DEBUG",
+            "handlers": [
+                "console"
+            ],
+            "propagate": "no"
+        }
+    },
+    "root": {
+        "level": "DEBUG",
+        "handlers": [
+            "console"
+        ]
+    }
+}
