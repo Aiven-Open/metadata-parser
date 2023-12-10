@@ -1,5 +1,5 @@
 file.*
-*test*
+*test
 conf/conf.env
 __pycache__
 certs/*

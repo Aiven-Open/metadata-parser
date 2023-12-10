@@ -38,7 +38,7 @@ def populate_service_map(self, service_type, service_name, project):
     global SERVICE_MAP
 
     service = self.get_service(project=project, service=service_name)
-    if service["state"] != "RUNNING":
+    if not service or service["state"] != "RUNNING":
         return
 
     try:
@@ -99,7 +99,7 @@ def explore(self, service_type, service_name, project):
     global SERVICE_MAP
     host = "no-host"
     service = self.get_service(project=project, service=service_name)
-    if service["state"] != "RUNNING":
+    if not service or service["state"] != "RUNNING":
         return nodes, edges
 
     try:
